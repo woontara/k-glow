@@ -1,0 +1,208 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum CertificationStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  REJECTED
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      UserRole @default(USER)
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id])
+
+  certificationRequests CertificationRequest[]
+  quotes                Quote[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Company {
+  id          String  @id @default(cuid())
+  name        String
+  nameKo      String?
+  nameRu      String?
+  description String?
+  website     String?
+  country     String  @default("KR")
+
+  users                 User[]
+  certificationRequests CertificationRequest[]
+  quotes                Quote[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Partner {
+  id          String  @id @default(cuid())
+  name        String
+  nameKo      String?
+  nameRu      String?
+  website     String  @unique
+  description String?
+  logoUrl     String?
+
+  // 분석 데이터
+  brandRecognition Float?   // 브랜드 인지도 점수 (0-100)
+  analysisData     Json?    // AI 분석 결과
+  lastCrawledAt    DateTime?
+
+  products  Product[]
+  analyses  Analysis[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Product {
+  id          String  @id @default(cuid())
+  partnerId   String
+  partner     Partner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+
+  name        String
+  nameKo      String?
+  nameRu      String?
+  description String?
+  descriptionKo String?
+  descriptionRu String?
+
+  price       Float?
+  priceRub    Float?
+  currency    String  @default("KRW")
+
+  imageUrl    String?
+  productUrl  String?
+  category    String?
+
+  // 제품 정보
+  ingredients String?
+  volume      String?
+  weight      Float?
+
+  // 분석 데이터
+  salesVolume Int?     // 판매량
+  rating      Float?   // 평점
+  reviewCount Int?     // 리뷰 수
+
+  metadata    Json?    // 추가 메타데이터
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([partnerId])
+}
+
+model CertificationRequest {
+  id        String              @id @default(cuid())
+  userId    String
+  user      User                @relation(fields: [userId], references: [id])
+  companyId String
+  company   Company             @relation(fields: [companyId], references: [id])
+
+  productName        String
+  productDescription String?
+  productCategory    String?
+
+  status      CertificationStatus @default(PENDING)
+  documents   Json?               // 제출된 문서 정보
+  notes       String?
+  adminNotes  String?
+
+  estimatedCost      Float?
+  estimatedDuration  Int?    // 예상 소요 일수
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  completedAt DateTime?
+
+  @@index([userId])
+  @@index([companyId])
+  @@index([status])
+}
+
+model Quote {
+  id        String  @id @default(cuid())
+  userId    String
+  user      User    @relation(fields: [userId], references: [id])
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id])
+
+  // 제품 정보
+  productName     String
+  productQuantity Int
+  productWeight   Float?
+  productValue    Float     // 제품 가격 (KRW)
+
+  // 배송 정보
+  shippingMethod  String?
+  shippingCost    Float?    // 배송비 (KRW)
+
+  // 환율 정보
+  exchangeRate    Float     // KRW to RUB
+
+  // 기타 비용
+  certificationCost Float?  // 인증 비용
+  customsCost       Float?  // 관세
+  otherCosts        Json?   // 기타 비용
+
+  // 총액
+  totalCostKrw Float
+  totalCostRub Float
+
+  notes       String?
+  validUntil  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model Analysis {
+  id        String   @id @default(cuid())
+  partnerId String
+  partner   Partner  @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+
+  // AI 분석 결과
+  summary           String?   // 요약
+  summaryRu         String?   // 러시아어 요약
+
+  brandStrength     Float?    // 브랜드 강점 점수
+  marketPotential   Float?    // 시장 잠재력
+  competitiveness   Float?    // 경쟁력
+
+  strengths         Json?     // 장점 리스트
+  weaknesses        Json?     // 약점 리스트
+  opportunities     Json?     // 기회 요인
+
+  recommendations   String?   // 추천사항
+  recommendationsRu String?   // 러시아어 추천사항
+
+  rawData           Json?     // 원본 분석 데이터
+
+  createdAt DateTime @default(now())
+
+  @@index([partnerId])
+}
