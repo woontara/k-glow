@@ -1,0 +1,5 @@
+# Local settings (personal overrides, not shared with team)
+settings.local.json
+
+# Agent working directories
+agents/*/workspace/

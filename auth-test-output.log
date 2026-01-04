@@ -1,0 +1,23 @@
+🚀 Starting authentication flow test...
+
+1️⃣  Navigating to home page...
+   ✅ Home page loaded (logged out state)
+
+2️⃣  Navigating to login page...
+   ✅ Login page loaded
+
+3️⃣  Filling in admin credentials...
+
+❌ Error during test: TimeoutError: Waiting for selector `input[type="email"]` failed
+    at CSSQueryHandler.waitFor (D:\K-Glow\node_modules\puppeteer-core\src\common\QueryHandler.ts:213:36)
+    at async CdpFrame.waitForSelector (D:\K-Glow\node_modules\puppeteer-core\src\api\Frame.ts:741:13)
+    at async CdpPage.waitForSelector (D:\K-Glow\node_modules\puppeteer-core\src\api\Page.ts:3058:12)
+    at async testAuthFlow (D:\K-Glow\test-auth-flow.ts:41:5) {
+  cause: TimeoutError: Waiting failed: 10000ms exceeded
+      at new WaitTask (D:\K-Glow\node_modules\puppeteer-core\src\common\WaitTask.ts:77:28)
+      at IsolatedWorld.waitForFunction (D:\K-Glow\node_modules\puppeteer-core\src\api\Realm.ts:74:22)
+      at CSSQueryHandler.waitFor (D:\K-Glow\node_modules\puppeteer-core\src\common\QueryHandler.ts:171:50)
+      at async CdpFrame.waitForSelector (D:\K-Glow\node_modules\puppeteer-core\src\api\Frame.ts:741:13)
+      at async CdpPage.waitForSelector (D:\K-Glow\node_modules\puppeteer-core\src\api\Page.ts:3058:12)
+      at async testAuthFlow (D:\K-Glow\test-auth-flow.ts:41:5)
+}

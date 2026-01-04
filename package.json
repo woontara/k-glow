@@ -1,0 +1,45 @@
+{
+  "name": "k-glow",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate dev",
+    "db:studio": "prisma studio"
+  },
+  "dependencies": {
+    "@auth/prisma-adapter": "^2.11.1",
+    "@prisma/client": "^6.1.0",
+    "axios": "^1.13.2",
+    "bcryptjs": "^3.0.3",
+    "cheerio": "^1.1.2",
+    "form-data": "^4.0.5",
+    "next": "^14.2.18",
+    "next-auth": "^5.0.0-beta.30",
+    "puppeteer": "^24.34.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zod": "^3.23.8",
+    "zustand": "^5.0.2"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.57.0",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^22.10.2",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^14.2.18",
+    "postcss": "^8.4.49",
+    "prisma": "^6.1.0",
+    "sharp": "^0.34.5",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.2"
+  }
+}

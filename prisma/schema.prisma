@@ -1,0 +1,208 @@
+// Prisma Schema for K-Glow Platform
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// 사용자
+model User {
+  id                     String                  @id @default(cuid())
+  email                  String                  @unique
+  name                   String
+  emailVerified          DateTime?
+  image                  String?
+  password               String?
+  role                   UserRole                @default(BRAND)
+  companyName            String?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+
+  certificationRequests  CertificationRequest[]
+  quotes                 Quote[]
+  accounts               Account[]
+  sessions               Session[]
+
+  @@map("users")
+}
+
+enum UserRole {
+  BRAND
+  BUYER
+  ADMIN
+}
+
+// 파트너사 (한국 브랜드)
+model Partner {
+  id                     String                  @id @default(cuid())
+  name                   String
+  nameRu                 String
+  websiteUrl             String
+  logoUrl                String?
+  description            String
+  descriptionRu          String
+  marketScore            Int                     @default(0)
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+
+  products               Product[]
+  certificationRequests  CertificationRequest[]
+
+  @@map("partners")
+}
+
+// 제품
+model Product {
+  id                     String                  @id @default(cuid())
+  partnerId              String
+  partner                Partner                 @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+
+  name                   String
+  nameRu                 String
+  category               String
+  price                  Float
+  priceRub               Float
+  ingredients            Json                    // String[]
+  ingredientsRu          Json                    // String[]
+  description            String
+  descriptionRu          String
+  imageUrls              Json                    // String[]
+
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+
+  @@index([partnerId])
+  @@map("products")
+}
+
+// 인증 신청
+model CertificationRequest {
+  id                     String                  @id @default(cuid())
+  userId                 String
+  user                   User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  partnerId              String
+  partner                Partner                 @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+
+  certType               CertificationType
+  status                 CertificationStatus     @default(PENDING)
+  documents              Json                    // String[]
+  estimatedCost          Float
+  notes                  String?
+
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+
+  @@index([userId])
+  @@index([partnerId])
+  @@index([status])
+  @@map("certification_requests")
+}
+
+enum CertificationType {
+  EAC
+  GOST
+  OTHER
+}
+
+enum CertificationStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  REJECTED
+}
+
+// 견적
+model Quote {
+  id                     String                  @id @default(cuid())
+  userId                 String
+  user                   User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  products               Json                    // QuoteProduct[]
+  totalKrw               Float
+  totalRub               Float
+  shippingCost           Float
+  certificationCost      Float
+  exchangeRate           Float
+
+  createdAt              DateTime                @default(now())
+
+  @@index([userId])
+  @@map("quotes")
+}
+
+// 상품 상세페이지 리빌드
+model ProductRebuild {
+  id                String   @id @default(cuid())
+  sourceUrl         String
+  sourceSite        String   // coupang, naver, 11st, generic
+
+  // 한국어 원본
+  name              String
+  price             Float?
+  priceOriginal     String?
+  description       String
+
+  // 러시아어 번역
+  nameRu            String
+  descriptionRu     String
+
+  // 성분
+  ingredients       Json     // String[]
+  ingredientsRu     Json     // String[]
+
+  // 이미지
+  screenshotUrl     String?
+  imageUrls         Json     // String[] - 다운로드된 로컬 경로
+  originalImageUrls Json     // String[] - 원본 URL
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([sourceUrl])
+  @@index([sourceSite])
+  @@map("product_rebuilds")
+}
+
+// NextAuth.js 모델
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}

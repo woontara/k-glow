@@ -1,0 +1,85 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - navigation [ref=e2]:
+    - generic [ref=e4]:
+      - link "K-Glow 한국 화장품 러시아 수출" [ref=e5] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e6]: K-Glow
+        - generic [ref=e7]: 한국 화장품 러시아 수출
+      - generic [ref=e8]:
+        - link "🏠홈" [ref=e9] [cursor=pointer]:
+          - /url: /
+        - link "🏢파트너사" [ref=e10] [cursor=pointer]:
+          - /url: /partners
+        - link "💰견적 계산" [ref=e11] [cursor=pointer]:
+          - /url: /calculator
+        - link "🤖브랜드 분석" [ref=e12] [cursor=pointer]:
+          - /url: /analyze
+        - link "📋인증 대행" [ref=e13] [cursor=pointer]:
+          - /url: /certification/new
+  - main [ref=e16]:
+    - generic [ref=e18]:
+      - generic [ref=e19]:
+        - heading "K-Glow" [level=2] [ref=e20]
+        - paragraph [ref=e21]: 로그인하여 서비스를 이용하세요
+      - generic [ref=e22]:
+        - generic [ref=e23]:
+          - button "Google로 계속하기" [ref=e24] [cursor=pointer]:
+            - img [ref=e25]
+            - text: Google로 계속하기
+          - button "Kakao로 계속하기" [ref=e30] [cursor=pointer]:
+            - generic [ref=e31]: Kakao로 계속하기
+        - generic [ref=e36]: 또는
+        - generic [ref=e37]:
+          - generic [ref=e38]:
+            - generic [ref=e39]: 이메일
+            - textbox "your@email.com" [ref=e40]
+          - generic [ref=e41]:
+            - generic [ref=e42]: 비밀번호
+            - textbox "••••••••" [ref=e43]
+          - button "로그인" [ref=e44] [cursor=pointer]
+        - generic [ref=e45]:
+          - text: 계정이 없으신가요?
+          - link "회원가입" [ref=e46] [cursor=pointer]:
+            - /url: /auth/signup
+  - contentinfo [ref=e47]:
+    - generic [ref=e48]:
+      - generic [ref=e49]:
+        - generic [ref=e50]:
+          - heading "K-Glow" [level=3] [ref=e51]
+          - paragraph [ref=e52]: 한국 중소 화장품 브랜드의 러시아/CIS 시장 진출을 지원하는 B2B 플랫폼
+          - paragraph [ref=e53]: © 2025 K-Glow. All rights reserved.
+        - generic [ref=e54]:
+          - heading "주요 서비스" [level=4] [ref=e55]
+          - list [ref=e56]:
+            - listitem [ref=e57]:
+              - link "파트너사 목록" [ref=e58] [cursor=pointer]:
+                - /url: /partners
+            - listitem [ref=e59]:
+              - link "견적 계산기" [ref=e60] [cursor=pointer]:
+                - /url: /calculator
+            - listitem [ref=e61]:
+              - link "브랜드 분석" [ref=e62] [cursor=pointer]:
+                - /url: /analyze
+            - listitem [ref=e63]:
+              - link "인증 대행" [ref=e64] [cursor=pointer]:
+                - /url: /certification/new
+        - generic [ref=e65]:
+          - heading "지원" [level=4] [ref=e66]
+          - list [ref=e67]:
+            - listitem [ref=e68]:
+              - link "문의하기" [ref=e69] [cursor=pointer]:
+                - /url: https://github.com/anthropics/claude-code
+            - listitem [ref=e70]:
+              - link "관리자" [ref=e71] [cursor=pointer]:
+                - /url: /admin
+          - paragraph [ref=e73]: Powered by Claude AI
+      - generic [ref=e75]:
+        - generic [ref=e76]: "기술 스택: Next.js 14 · TypeScript · Tailwind CSS · Prisma · Claude API"
+        - generic [ref=e77]:
+          - generic [ref=e78]: 🇰🇷 한국
+          - generic [ref=e79]: →
+          - generic [ref=e80]: 🇷🇺 러시아
+```
