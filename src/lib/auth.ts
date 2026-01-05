@@ -96,7 +96,7 @@ if (process.env.KAKAO_CLIENT_ID && process.env.KAKAO_CLIENT_SECRET) {
         image: profile.kakao_account?.profile?.profile_image_url,
       }
     },
-  })
+  } as any)
 }
 
 export const authConfig: NextAuthConfig = {
