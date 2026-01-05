@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
 
     console.error('회원가입 실패:', error)
     return NextResponse.json(
-      { error: '회원가입에 실패했습니다' },
+      { error: '회원가입에 실패했습니다', details: error instanceof Error ? error.message : 'unknown' },
       { status: 500 }
     )
   }

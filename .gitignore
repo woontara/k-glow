@@ -56,3 +56,8 @@ test-*.ts
 # claude
 /.claude
 /.mcp.json
+
+.vercel
+.env*.local
+.env.backup
+.env.production
