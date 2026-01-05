@@ -1,7 +1,6 @@
 import NextAuth, { NextAuthConfig } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
 import GoogleProvider from "next-auth/providers/google"
-import KakaoProvider from "next-auth/providers/kakao"
 import bcrypt from "bcryptjs"
 import { prisma } from "@/lib/prisma"
 import { UserRole } from "@prisma/client"
@@ -74,15 +73,30 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   )
 }
 
-// Add Kakao if configured
+// Add Kakao if configured (custom provider for better compatibility)
 if (process.env.KAKAO_CLIENT_ID && process.env.KAKAO_CLIENT_SECRET) {
-  providers.push(
-    KakaoProvider({
-      clientId: process.env.KAKAO_CLIENT_ID,
-      clientSecret: process.env.KAKAO_CLIENT_SECRET,
-      checks: ["state"],
-    })
-  )
+  providers.push({
+    id: "kakao",
+    name: "Kakao",
+    type: "oauth",
+    authorization: {
+      url: "https://kauth.kakao.com/oauth/authorize",
+      params: { scope: "profile_nickname profile_image account_email" },
+    },
+    token: "https://kauth.kakao.com/oauth/token",
+    userinfo: "https://kapi.kakao.com/v2/user/me",
+    clientId: process.env.KAKAO_CLIENT_ID,
+    clientSecret: process.env.KAKAO_CLIENT_SECRET,
+    checks: ["state"],
+    profile(profile: any) {
+      return {
+        id: String(profile.id),
+        name: profile.kakao_account?.profile?.nickname,
+        email: profile.kakao_account?.email,
+        image: profile.kakao_account?.profile?.profile_image_url,
+      }
+    },
+  })
 }
 
 export const authConfig: NextAuthConfig = {
