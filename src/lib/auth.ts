@@ -85,6 +85,26 @@ if (process.env.KAKAO_CLIENT_ID && process.env.KAKAO_CLIENT_SECRET) {
     },
     token: {
       url: "https://kauth.kakao.com/oauth/token",
+      async request({ params, provider }: { params: Record<string, unknown>; provider: { clientId?: string; clientSecret?: string; callbackUrl?: string } }) {
+        const redirectUri = (params.redirect_uri as string) || provider.callbackUrl || "https://k-glow.kr/api/auth/callback/kakao"
+        console.log("[KAKAO TOKEN] Request params:", { code: params.code, redirect_uri: redirectUri })
+        const response = await fetch("https://kauth.kakao.com/oauth/token", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded;charset=utf-8",
+          },
+          body: new URLSearchParams({
+            grant_type: "authorization_code",
+            client_id: provider.clientId as string,
+            client_secret: provider.clientSecret as string,
+            redirect_uri: redirectUri,
+            code: params.code as string,
+          }),
+        })
+        const tokens = await response.json()
+        console.log("[KAKAO TOKEN] Response:", JSON.stringify(tokens))
+        return { tokens }
+      },
     },
     userinfo: "https://kapi.kakao.com/v2/user/me",
     clientId: process.env.KAKAO_CLIENT_ID,
@@ -119,12 +139,65 @@ export const authConfig: NextAuthConfig = {
   },
 
   callbacks: {
-    async jwt({ token, user }) {
+    async signIn({ user, account }) {
+      // OAuth 로그인 시 같은 이메일의 기존 계정과 연결
+      if (account?.provider !== "credentials" && user.email) {
+        try {
+          const existingUser = await prisma.user.findUnique({
+            where: { email: user.email }
+          })
+
+          if (existingUser) {
+            // 기존 계정이 있으면 해당 계정 정보 사용
+            console.log("[AUTH] Found existing user for OAuth:", existingUser.email)
+            user.id = existingUser.id
+            ;(user as any).role = existingUser.role
+            ;(user as any).companyName = existingUser.companyName
+          } else {
+            // 새 사용자 생성
+            console.log("[AUTH] Creating new user from OAuth:", user.email)
+            const newUser = await prisma.user.create({
+              data: {
+                email: user.email,
+                name: user.name || "사용자",
+                image: user.image,
+                role: UserRole.BUYER,
+              }
+            })
+            user.id = newUser.id
+            ;(user as any).role = newUser.role
+            ;(user as any).companyName = newUser.companyName
+          }
+        } catch (error) {
+          console.error("[AUTH] OAuth signIn error:", error)
+        }
+      }
+      return true
+    },
+
+    async jwt({ token, user, account }) {
       if (user) {
         token.id = user.id
         token.role = (user as any).role
         token.companyName = (user as any).companyName
       }
+
+      // OAuth 로그인 시 DB에서 최신 사용자 정보 가져오기
+      if (account?.provider !== "credentials" && token.email) {
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { email: token.email as string }
+          })
+          if (dbUser) {
+            token.id = dbUser.id
+            token.role = dbUser.role
+            token.companyName = dbUser.companyName
+          }
+        } catch (error) {
+          console.error("[AUTH] JWT callback error:", error)
+        }
+      }
+
       return token
     },
 

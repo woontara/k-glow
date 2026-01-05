@@ -4,10 +4,11 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
-// 테스트 모드: 세션 관련 import 제거
+import { useSession, signOut } from 'next-auth/react';
 
 export default function Navigation() {
   const pathname = usePathname();
+  const { data: session, status } = useSession();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -55,6 +56,24 @@ export default function Navigation() {
     return pathname.startsWith(href);
   };
 
+  const handleSignOut = () => {
+    setUserMenuOpen(false);
+    signOut({ callbackUrl: '/' });
+  };
+
+  const getUserInitial = () => {
+    if (session?.user?.name) {
+      return session.user.name.charAt(0).toUpperCase();
+    }
+    if (session?.user?.email) {
+      return session.user.email.charAt(0).toUpperCase();
+    }
+    return 'U';
+  };
+
+  const getUserDisplayName = () => {
+    return session?.user?.name || session?.user?.email?.split('@')[0] || '사용자';
+  };
 
   return (
     <>
@@ -181,91 +200,143 @@ export default function Navigation() {
               ))}
             </div>
 
-            {/* Auth Section - 테스트 모드: 테스트 사용자로 표시 */}
+            {/* Auth Section */}
             <div className="hidden md:flex items-center gap-4">
-              <div className="relative">
-                <button
-                  onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  className={`
-                    flex items-center gap-3 px-4 py-2 rounded-full
-                    transition-all duration-300 group
-                    ${scrolled
-                      ? 'hover:bg-[#8BA4B4]/10'
-                      : 'hover:bg-white/40'
-                    }
-                  `}
-                >
-                  <div className="relative">
-                    <div className="absolute inset-0 bg-gradient-to-br from-[#8BA4B4] to-[#A8C5D4] rounded-full blur-sm opacity-50" />
-                    <div className="relative w-10 h-10 bg-gradient-to-br from-[#7A9AAD] to-[#9BB4C4] text-white rounded-full flex items-center justify-center font-semibold text-sm shadow-lg">
-                      T
+              {status === 'loading' ? (
+                <div className="w-10 h-10 bg-[#8BA4B4]/20 rounded-full animate-pulse" />
+              ) : session ? (
+                <div className="relative">
+                  <button
+                    onClick={() => setUserMenuOpen(!userMenuOpen)}
+                    className={`
+                      flex items-center gap-3 px-4 py-2 rounded-full
+                      transition-all duration-300 group
+                      ${scrolled
+                        ? 'hover:bg-[#8BA4B4]/10'
+                        : 'hover:bg-white/40'
+                      }
+                    `}
+                  >
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-gradient-to-br from-[#8BA4B4] to-[#A8C5D4] rounded-full blur-sm opacity-50" />
+                      {session.user?.image ? (
+                        <img
+                          src={session.user.image}
+                          alt={getUserDisplayName()}
+                          className="relative w-10 h-10 rounded-full object-cover shadow-lg"
+                        />
+                      ) : (
+                        <div className="relative w-10 h-10 bg-gradient-to-br from-[#7A9AAD] to-[#9BB4C4] text-white rounded-full flex items-center justify-center font-semibold text-sm shadow-lg">
+                          {getUserInitial()}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                  <div className="text-left">
-                    <span className={`block text-sm font-semibold ${scrolled ? 'text-[#2D3436]' : 'text-[#2D3436]'}`}>
-                      테스트 사용자
-                    </span>
-                    <span className="block text-[10px] font-medium text-[#8BA4B4]">
-                      ADMIN
-                    </span>
-                  </div>
-                </button>
+                    <div className="text-left">
+                      <span className={`block text-sm font-semibold ${scrolled ? 'text-[#2D3436]' : 'text-[#2D3436]'}`}>
+                        {getUserDisplayName()}
+                      </span>
+                      <span className="block text-[10px] font-medium text-[#8BA4B4]">
+                        {session.user?.role || 'USER'}
+                      </span>
+                    </div>
+                  </button>
 
-                {userMenuOpen && (
-                  <>
-                    <div className="fixed inset-0 z-10" onClick={() => setUserMenuOpen(false)} />
-                    <div className="absolute right-0 mt-3 w-72 nav-glass border border-white/50 rounded-3xl shadow-[0_20px_60px_rgba(139,164,180,0.25)] py-2 z-20 overflow-hidden animate-slideDown">
-                      <div className="px-6 py-5 border-b border-[#E8E2D9]/50">
-                        <div className="flex items-center gap-4">
-                          <div className="w-14 h-14 bg-gradient-to-br from-[#7A9AAD] to-[#9BB4C4] text-white rounded-2xl flex items-center justify-center font-bold text-xl shadow-lg">
-                            T
-                          </div>
-                          <div>
-                            <p className="font-semibold text-[#2D3436]">테스트 사용자</p>
-                            <p className="text-xs text-[#636E72] mt-0.5">test@kglow.com</p>
-                            <p className="text-xs text-[#8BA4B4] mt-1 font-medium">K-Glow</p>
+                  {userMenuOpen && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setUserMenuOpen(false)} />
+                      <div className="absolute right-0 mt-3 w-72 nav-glass border border-white/50 rounded-3xl shadow-[0_20px_60px_rgba(139,164,180,0.25)] py-2 z-20 overflow-hidden animate-slideDown">
+                        <div className="px-6 py-5 border-b border-[#E8E2D9]/50">
+                          <div className="flex items-center gap-4">
+                            {session.user?.image ? (
+                              <img
+                                src={session.user.image}
+                                alt={getUserDisplayName()}
+                                className="w-14 h-14 rounded-2xl object-cover shadow-lg"
+                              />
+                            ) : (
+                              <div className="w-14 h-14 bg-gradient-to-br from-[#7A9AAD] to-[#9BB4C4] text-white rounded-2xl flex items-center justify-center font-bold text-xl shadow-lg">
+                                {getUserInitial()}
+                              </div>
+                            )}
+                            <div>
+                              <p className="font-semibold text-[#2D3436]">{getUserDisplayName()}</p>
+                              <p className="text-xs text-[#636E72] mt-0.5">{session.user?.email}</p>
+                              {session.user?.companyName && (
+                                <p className="text-xs text-[#8BA4B4] mt-1 font-medium">{session.user.companyName}</p>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      <div className="py-2 px-2">
-                        <Link
-                          href="/certification/status"
-                          className="flex items-center gap-4 px-4 py-3 text-sm text-[#636E72] hover:bg-[#8BA4B4]/10 hover:text-[#5A7A8A] rounded-xl transition-all duration-200"
-                          onClick={() => setUserMenuOpen(false)}
-                        >
-                          <div className="w-9 h-9 bg-[#8BA4B4]/10 rounded-xl flex items-center justify-center">
-                            <svg className="w-5 h-5 text-[#8BA4B4]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                          </div>
-                          <div>
-                            <span className="font-medium">내 인증 현황</span>
-                            <p className="text-[10px] text-[#8BA4B4]">Certification Status</p>
-                          </div>
-                        </Link>
+                        <div className="py-2 px-2">
+                          <Link
+                            href="/certification/status"
+                            className="flex items-center gap-4 px-4 py-3 text-sm text-[#636E72] hover:bg-[#8BA4B4]/10 hover:text-[#5A7A8A] rounded-xl transition-all duration-200"
+                            onClick={() => setUserMenuOpen(false)}
+                          >
+                            <div className="w-9 h-9 bg-[#8BA4B4]/10 rounded-xl flex items-center justify-center">
+                              <svg className="w-5 h-5 text-[#8BA4B4]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                            </div>
+                            <div>
+                              <span className="font-medium">내 인증 현황</span>
+                              <p className="text-[10px] text-[#8BA4B4]">Certification Status</p>
+                            </div>
+                          </Link>
 
-                        <Link
-                          href="/admin"
-                          className="flex items-center gap-4 px-4 py-3 text-sm text-[#636E72] hover:bg-[#8BA4B4]/10 hover:text-[#5A7A8A] rounded-xl transition-all duration-200"
-                          onClick={() => setUserMenuOpen(false)}
-                        >
-                          <div className="w-9 h-9 bg-[#8BA4B4]/10 rounded-xl flex items-center justify-center">
-                            <svg className="w-5 h-5 text-[#8BA4B4]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            </svg>
-                          </div>
-                          <div>
-                            <span className="font-medium">관리자 대시보드</span>
-                            <p className="text-[10px] text-[#8BA4B4]">Admin Dashboard</p>
-                          </div>
-                        </Link>
+                          {session.user?.role === 'ADMIN' && (
+                            <Link
+                              href="/admin"
+                              className="flex items-center gap-4 px-4 py-3 text-sm text-[#636E72] hover:bg-[#8BA4B4]/10 hover:text-[#5A7A8A] rounded-xl transition-all duration-200"
+                              onClick={() => setUserMenuOpen(false)}
+                            >
+                              <div className="w-9 h-9 bg-[#8BA4B4]/10 rounded-xl flex items-center justify-center">
+                                <svg className="w-5 h-5 text-[#8BA4B4]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                              </div>
+                              <div>
+                                <span className="font-medium">관리자 대시보드</span>
+                                <p className="text-[10px] text-[#8BA4B4]">Admin Dashboard</p>
+                              </div>
+                            </Link>
+                          )}
+
+                          <button
+                            onClick={handleSignOut}
+                            className="w-full flex items-center gap-4 px-4 py-3 text-sm text-red-500 hover:bg-red-50 rounded-xl transition-all duration-200"
+                          >
+                            <div className="w-9 h-9 bg-red-50 rounded-xl flex items-center justify-center">
+                              <svg className="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                              </svg>
+                            </div>
+                            <div>
+                              <span className="font-medium">로그아웃</span>
+                              <p className="text-[10px] text-red-400">Sign Out</p>
+                            </div>
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  </>
-                )}
-              </div>
+                    </>
+                  )}
+                </div>
+              ) : (
+                <Link
+                  href="/auth/signin"
+                  className={`
+                    px-6 py-2.5 rounded-full text-sm font-medium
+                    bg-gradient-to-r from-[#7A9AAD] via-[#8BA4B4] to-[#9BB4C4]
+                    text-white shadow-lg shadow-[#8BA4B4]/30
+                    hover:shadow-xl hover:shadow-[#8BA4B4]/40
+                    transition-all duration-300
+                  `}
+                >
+                  로그인
+                </Link>
+              )}
             </div>
 
             {/* Mobile Menu Button */}
@@ -323,40 +394,72 @@ export default function Navigation() {
                   </Link>
                 ))}
 
-                {/* Mobile Auth - 테스트 모드 */}
+                {/* Mobile Auth */}
                 <div className="border-t border-[#E8E2D9]/50 pt-6 mt-4">
-                  <div className="flex items-center gap-4 px-5 py-4 mb-4 bg-gradient-to-r from-[#8BA4B4]/10 to-[#A8C5D4]/10 rounded-2xl">
-                    <div className="w-12 h-12 bg-gradient-to-br from-[#7A9AAD] to-[#9BB4C4] text-white rounded-2xl flex items-center justify-center font-bold text-lg shadow-lg">
-                      T
-                    </div>
-                    <div>
-                      <p className="font-semibold text-[#2D3436]">테스트 사용자</p>
-                      <p className="text-xs text-[#8BA4B4] font-medium">ADMIN</p>
-                    </div>
-                  </div>
+                  {session ? (
+                    <>
+                      <div className="flex items-center gap-4 px-5 py-4 mb-4 bg-gradient-to-r from-[#8BA4B4]/10 to-[#A8C5D4]/10 rounded-2xl">
+                        {session.user?.image ? (
+                          <img
+                            src={session.user.image}
+                            alt={getUserDisplayName()}
+                            className="w-12 h-12 rounded-2xl object-cover shadow-lg"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 bg-gradient-to-br from-[#7A9AAD] to-[#9BB4C4] text-white rounded-2xl flex items-center justify-center font-bold text-lg shadow-lg">
+                            {getUserInitial()}
+                          </div>
+                        )}
+                        <div>
+                          <p className="font-semibold text-[#2D3436]">{getUserDisplayName()}</p>
+                          <p className="text-xs text-[#8BA4B4] font-medium">{session.user?.role || 'USER'}</p>
+                        </div>
+                      </div>
 
-                  <Link
-                    href="/certification/status"
-                    className="flex items-center gap-3 px-5 py-4 text-sm font-medium text-[#636E72] hover:bg-[#8BA4B4]/10 rounded-2xl transition-colors"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    <svg className="w-5 h-5 text-[#8BA4B4]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    내 인증 현황
-                  </Link>
+                      <Link
+                        href="/certification/status"
+                        className="flex items-center gap-3 px-5 py-4 text-sm font-medium text-[#636E72] hover:bg-[#8BA4B4]/10 rounded-2xl transition-colors"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <svg className="w-5 h-5 text-[#8BA4B4]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        내 인증 현황
+                      </Link>
 
-                  <Link
-                    href="/admin"
-                    className="flex items-center gap-3 px-5 py-4 text-sm font-medium text-[#636E72] hover:bg-[#8BA4B4]/10 rounded-2xl transition-colors"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    <svg className="w-5 h-5 text-[#8BA4B4]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    관리자 대시보드
-                  </Link>
+                      {session.user?.role === 'ADMIN' && (
+                        <Link
+                          href="/admin"
+                          className="flex items-center gap-3 px-5 py-4 text-sm font-medium text-[#636E72] hover:bg-[#8BA4B4]/10 rounded-2xl transition-colors"
+                          onClick={() => setMobileMenuOpen(false)}
+                        >
+                          <svg className="w-5 h-5 text-[#8BA4B4]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                          관리자 대시보드
+                        </Link>
+                      )}
+
+                      <button
+                        onClick={handleSignOut}
+                        className="w-full flex items-center gap-3 px-5 py-4 text-sm font-medium text-red-500 hover:bg-red-50 rounded-2xl transition-colors"
+                      >
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                        </svg>
+                        로그아웃
+                      </button>
+                    </>
+                  ) : (
+                    <Link
+                      href="/auth/signin"
+                      className="flex items-center justify-center gap-2 px-5 py-4 text-sm font-medium bg-gradient-to-r from-[#7A9AAD] via-[#8BA4B4] to-[#9BB4C4] text-white rounded-2xl shadow-lg"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      로그인
+                    </Link>
+                  )}
                 </div>
               </div>
             </div>
