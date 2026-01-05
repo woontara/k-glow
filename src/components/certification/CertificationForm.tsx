@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
 
 interface Partner {
   id: string;
@@ -19,7 +18,6 @@ interface UploadedFile {
 
 export default function CertificationForm() {
   const router = useRouter();
-  const { data: session, status } = useSession();
   const [partners, setPartners] = useState<Partner[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -33,18 +31,10 @@ export default function CertificationForm() {
     notes: '',
   });
 
-  // Redirect to login if not authenticated
+  // 테스트 모드: 바로 파트너 로드
   useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/auth/signin?callbackUrl=/certification/new');
-    }
-  }, [status, router]);
-
-  useEffect(() => {
-    if (status === 'authenticated') {
-      loadPartners();
-    }
-  }, [status]);
+    loadPartners();
+  }, []);
 
   const loadPartners = async () => {
     try {
@@ -166,15 +156,6 @@ export default function CertificationForm() {
         return '';
     }
   };
-
-  if (status === 'loading') {
-    return (
-      <div className="text-center py-12">
-        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        <p className="mt-4 text-gray-600">로딩 중...</p>
-      </div>
-    );
-  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">

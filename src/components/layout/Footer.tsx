@@ -1,3 +1,5 @@
+import Image from 'next/image';
+
 export default function Footer() {
   return (
     <footer className="bg-gray-50 border-t mt-auto">
@@ -5,9 +7,14 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* 회사 정보 */}
           <div>
-            <h3 className="font-bold text-lg mb-3 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              K-Glow
-            </h3>
+            <Image
+              src="/logo.png"
+              alt="K-Glow"
+              width={100}
+              height={36}
+              className="h-9 w-auto mb-3"
+              unoptimized
+            />
             <p className="text-sm text-gray-600 mb-2">
               한국 중소 화장품 브랜드의 러시아/CIS 시장 진출을 지원하는 B2B 플랫폼
             </p>

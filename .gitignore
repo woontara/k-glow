@@ -40,3 +40,19 @@ next-env.d.ts
 
 # uploads
 /public/uploads
+
+# test files & screenshots
+*.png
+*.log
+test-*.json
+test-*.ts
+/test-results
+/playwright-report
+/tests
+/specs
+*.md
+!README.md
+
+# claude
+/.claude
+/.mcp.json
