@@ -83,10 +83,15 @@ if (process.env.KAKAO_CLIENT_ID && process.env.KAKAO_CLIENT_SECRET) {
       url: "https://kauth.kakao.com/oauth/authorize",
       params: { scope: "profile_nickname profile_image account_email" },
     },
-    token: "https://kauth.kakao.com/oauth/token",
+    token: {
+      url: "https://kauth.kakao.com/oauth/token",
+    },
     userinfo: "https://kapi.kakao.com/v2/user/me",
     clientId: process.env.KAKAO_CLIENT_ID,
     clientSecret: process.env.KAKAO_CLIENT_SECRET,
+    client: {
+      token_endpoint_auth_method: "client_secret_post",
+    },
     checks: ["state"],
     profile(profile: any) {
       return {
