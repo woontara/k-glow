@@ -47,12 +47,13 @@ export default function Footer() {
             <h4 className="font-semibold mb-3">지원</h4>
             <ul className="space-y-2 text-sm text-gray-600">
               <li>
-                <a href="https://github.com/anthropics/claude-code" target="_blank" rel="noopener noreferrer" className="hover:text-blue-600">
-                  문의하기
-                </a>
+                <a href="/contact" className="hover:text-blue-600">문의하기</a>
               </li>
               <li>
-                <a href="/admin" className="hover:text-blue-600">관리자</a>
+                <a href="/privacy" className="hover:text-blue-600">개인정보처리방침</a>
+              </li>
+              <li>
+                <a href="/terms" className="hover:text-blue-600">이용약관</a>
               </li>
             </ul>
             <div className="mt-4">
