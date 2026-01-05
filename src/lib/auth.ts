@@ -17,7 +17,10 @@ const providers: NextAuthConfig["providers"] = [
       password: { label: "Password", type: "password" }
     },
     async authorize(credentials) {
+      console.log("[AUTH] Attempting login for:", credentials?.email)
+
       if (!credentials?.email || !credentials?.password) {
+        console.log("[AUTH] Missing credentials")
         return null
       }
 
@@ -26,7 +29,10 @@ const providers: NextAuthConfig["providers"] = [
           where: { email: credentials.email as string }
         })
 
+        console.log("[AUTH] User found:", !!user)
+
         if (!user || !user.password) {
+          console.log("[AUTH] User not found or no password")
           return null
         }
 
@@ -35,10 +41,13 @@ const providers: NextAuthConfig["providers"] = [
           user.password
         )
 
+        console.log("[AUTH] Password valid:", isPasswordValid)
+
         if (!isPasswordValid) {
           return null
         }
 
+        console.log("[AUTH] Login successful for:", user.email)
         return {
           id: user.id,
           email: user.email,
@@ -48,7 +57,7 @@ const providers: NextAuthConfig["providers"] = [
           image: user.image,
         }
       } catch (error) {
-        console.error("Auth error:", error)
+        console.error("[AUTH] Error:", error)
         return null
       }
     }
@@ -109,7 +118,7 @@ export const authConfig: NextAuthConfig = {
     },
   },
 
-  debug: process.env.NODE_ENV === "development",
+  debug: true, // Enable for debugging
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth(authConfig)
