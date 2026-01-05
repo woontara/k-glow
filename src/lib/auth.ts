@@ -53,8 +53,8 @@ const providers: NextAuthConfig["providers"] = [
           email: user.email,
           name: user.name,
           role: user.role,
-          companyName: user.companyName,
-          image: user.image,
+          companyName: user.companyName ?? undefined,
+          image: user.image ?? undefined,
         }
       } catch (error) {
         console.error("[AUTH] Error:", error)
