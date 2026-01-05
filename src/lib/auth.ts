@@ -1,5 +1,4 @@
 import NextAuth, { NextAuthConfig } from "next-auth"
-import { PrismaAdapter } from "@auth/prisma-adapter"
 import CredentialsProvider from "next-auth/providers/credentials"
 import GoogleProvider from "next-auth/providers/google"
 import KakaoProvider from "next-auth/providers/kakao"
@@ -7,29 +6,28 @@ import bcrypt from "bcryptjs"
 import { prisma } from "@/lib/prisma"
 import { UserRole } from "@prisma/client"
 
-export const authConfig: NextAuthConfig = {
-  adapter: PrismaAdapter(prisma) as any,
-  trustHost: true,
-  providers: [
-    // Email/Password Authentication
-    CredentialsProvider({
-      id: "credentials",
-      name: "Credentials",
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" }
-      },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          throw new Error("이메일과 비밀번호를 입력해주세요")
-        }
+// Build providers list
+const providers: NextAuthConfig["providers"] = [
+  // Email/Password Authentication
+  CredentialsProvider({
+    id: "credentials",
+    name: "이메일",
+    credentials: {
+      email: { label: "Email", type: "email" },
+      password: { label: "Password", type: "password" }
+    },
+    async authorize(credentials) {
+      if (!credentials?.email || !credentials?.password) {
+        return null
+      }
 
+      try {
         const user = await prisma.user.findUnique({
           where: { email: credentials.email as string }
         })
 
         if (!user || !user.password) {
-          throw new Error("존재하지 않는 사용자입니다")
+          return null
         }
 
         const isPasswordValid = await bcrypt.compare(
@@ -38,32 +36,48 @@ export const authConfig: NextAuthConfig = {
         )
 
         if (!isPasswordValid) {
-          throw new Error("비밀번호가 일치하지 않습니다")
+          return null
         }
 
         return {
           id: user.id,
-          email: user.email!,
+          email: user.email,
           name: user.name,
           role: user.role,
-          companyName: user.companyName ?? undefined,
-          image: user.image ?? undefined,
+          companyName: user.companyName,
+          image: user.image,
         }
+      } catch (error) {
+        console.error("Auth error:", error)
+        return null
       }
-    }),
+    }
+  }),
+]
 
-    // Google OAuth
+// Add Google if configured
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  providers.push(
     GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID || "",
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
-    }),
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    })
+  )
+}
 
-    // Kakao OAuth
+// Add Kakao if configured
+if (process.env.KAKAO_CLIENT_ID && process.env.KAKAO_CLIENT_SECRET) {
+  providers.push(
     KakaoProvider({
-      clientId: process.env.KAKAO_CLIENT_ID || "",
-      clientSecret: process.env.KAKAO_CLIENT_SECRET || "",
-    }),
-  ],
+      clientId: process.env.KAKAO_CLIENT_ID,
+      clientSecret: process.env.KAKAO_CLIENT_SECRET,
+    })
+  )
+}
+
+export const authConfig: NextAuthConfig = {
+  trustHost: true,
+  providers,
 
   session: {
     strategy: "jwt",
@@ -72,32 +86,16 @@ export const authConfig: NextAuthConfig = {
 
   pages: {
     signIn: "/auth/signin",
-    signOut: "/auth/signout",
     error: "/auth/error",
-    verifyRequest: "/auth/verify-request",
-    newUser: "/auth/welcome"
   },
 
   callbacks: {
-    async jwt({ token, user, account }) {
-      // Initial sign in
+    async jwt({ token, user }) {
       if (user) {
         token.id = user.id
-        token.role = user.role
-        token.companyName = user.companyName
+        token.role = (user as any).role
+        token.companyName = (user as any).companyName
       }
-
-      // OAuth sign in
-      if (account?.provider && user) {
-        // Update user with OAuth info if needed
-        await prisma.user.update({
-          where: { id: user.id },
-          data: {
-            emailVerified: new Date(),
-          }
-        })
-      }
-
       return token
     },
 
@@ -109,48 +107,10 @@ export const authConfig: NextAuthConfig = {
       }
       return session
     },
-
-    async signIn({ user, account, profile }) {
-      // Allow all sign-ins for credentials
-      if (account?.provider === "credentials") {
-        return true
-      }
-
-      // For OAuth providers, create user if doesn't exist
-      if (account?.provider && user.email) {
-        const existingUser = await prisma.user.findUnique({
-          where: { email: user.email }
-        })
-
-        if (!existingUser) {
-          // Create new user for OAuth
-          await prisma.user.create({
-            data: {
-              email: user.email,
-              name: user.name || "사용자",
-              emailVerified: new Date(),
-              image: user.image,
-              role: "BRAND", // Default role
-            }
-          })
-        }
-      }
-
-      return true
-    },
-  },
-
-  events: {
-    async signIn({ user }) {
-      console.log(`User signed in: ${user.email}`)
-    },
-    async signOut() {
-      console.log(`User signed out`)
-    },
   },
 
   debug: process.env.NODE_ENV === "development",
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth(authConfig)
-export const authOptions = authConfig // For backward compatibility
+export const authOptions = authConfig
