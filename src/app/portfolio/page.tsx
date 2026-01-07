@@ -6,14 +6,28 @@ import Image from 'next/image';
 
 interface Portfolio {
   id: string;
-  category: string;
+  // 브랜드 정보
   brand: string;
+  brandLogoUrl: string | null;
+  brandWebsite: string | null;
+  category: string;
+  // 프로젝트 정보
   title: string;
-  description: string;
-  imageUrl: string;
-  salesAmount: string | null;
+  marketplaces: string[];
+  services: string[];
+  projectYear: string | null;
+  duration: string | null;
+  // 성과 지표
+  monthlySales: string | null;
   productCount: string | null;
   rating: string | null;
+  achievement: string | null;
+  // 스토리
+  challenge: string | null;
+  solution: string | null;
+  results: string | null;
+  // 표시 설정
+  imageUrl: string;
   gradient: string;
 }
 
@@ -31,12 +45,15 @@ export default function PortfolioPage() {
   const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedPortfolio, setSelectedPortfolio] = useState<Portfolio | null>(null);
 
   const categories = [
     { id: 'all', label: '전체', icon: '🎯' },
     { id: 'SKINCARE', label: '스킨케어', icon: '💧' },
     { id: 'MAKEUP', label: '메이크업', icon: '💄' },
     { id: 'HAIRCARE', label: '헤어케어', icon: '💇' },
+    { id: 'BODYCARE', label: '바디케어', icon: '🧴' },
+    { id: 'OTHER', label: '기타', icon: '✨' },
   ];
 
   useEffect(() => {
@@ -71,12 +88,8 @@ export default function PortfolioPage() {
     : portfolios.filter(p => p.category === filter);
 
   const getCategoryLabel = (category: string) => {
-    switch (category) {
-      case 'SKINCARE': return '스킨케어';
-      case 'MAKEUP': return '메이크업';
-      case 'HAIRCARE': return '헤어케어';
-      default: return category;
-    }
+    const cat = categories.find(c => c.id === category);
+    return cat ? cat.label : category;
   };
 
   return (
@@ -163,8 +176,9 @@ export default function PortfolioPage() {
               {filteredProjects.map((project, index) => (
                 <div
                   key={project.id}
-                  className={`card-luxury rounded-[2rem] overflow-hidden group ${mounted ? 'animate-reveal' : 'opacity-0'}`}
+                  className={`card-luxury rounded-[2rem] overflow-hidden group cursor-pointer ${mounted ? 'animate-reveal' : 'opacity-0'}`}
                   style={{ animationDelay: `${(index + 4) * 100}ms` }}
+                  onClick={() => setSelectedPortfolio(project)}
                 >
                   {/* Image */}
                   <div className="relative h-56 overflow-hidden">
@@ -178,36 +192,79 @@ export default function PortfolioPage() {
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
 
                     {/* Brand Badge */}
-                    <div className="absolute top-4 left-4">
+                    <div className="absolute top-4 left-4 flex items-center gap-2">
                       <span className={`px-4 py-2 bg-gradient-to-r ${project.gradient} text-white text-xs font-semibold rounded-full shadow-lg`}>
                         {project.brand}
                       </span>
+                      <span className="px-3 py-1.5 bg-black/40 backdrop-blur text-white text-xs rounded-full">
+                        {getCategoryLabel(project.category)}
+                      </span>
                     </div>
 
-                    {/* Hover Overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#2D3436]/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-end p-6">
-                      <div className="text-white">
-                        <p className="text-sm opacity-80">{getCategoryLabel(project.category)}</p>
+                    {/* Project Year & Duration */}
+                    {(project.projectYear || project.duration) && (
+                      <div className="absolute bottom-4 left-4 flex items-center gap-2">
+                        {project.projectYear && (
+                          <span className="px-3 py-1 bg-white/90 backdrop-blur text-[#2D3436] text-xs font-medium rounded-full">
+                            {project.projectYear}
+                          </span>
+                        )}
+                        {project.duration && (
+                          <span className="px-3 py-1 bg-white/90 backdrop-blur text-[#2D3436] text-xs font-medium rounded-full">
+                            {project.duration}
+                          </span>
+                        )}
                       </div>
+                    )}
+
+                    {/* Hover Overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#2D3436]/90 to-[#2D3436]/40 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-center justify-center">
+                      <span className="px-6 py-3 bg-white text-[#2D3436] font-semibold rounded-full transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
+                        자세히 보기
+                      </span>
                     </div>
                   </div>
 
                   {/* Content */}
                   <div className="p-6">
-                    <h3 className="font-display text-xl font-semibold text-[#2D3436] mb-2 group-hover:text-[#5A7A8A] transition-colors">
+                    <h3 className="font-display text-xl font-semibold text-[#2D3436] mb-3 group-hover:text-[#5A7A8A] transition-colors line-clamp-2">
                       {project.title}
                     </h3>
-                    <p className="text-[#636E72] text-sm mb-6 leading-relaxed">
-                      {project.description}
-                    </p>
+
+                    {/* Marketplaces */}
+                    {project.marketplaces && project.marketplaces.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mb-4">
+                        {project.marketplaces.map((m: string) => (
+                          <span key={m} className="px-2 py-1 bg-blue-50 text-blue-600 text-xs rounded-full">
+                            {m}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Services */}
+                    {project.services && project.services.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mb-4">
+                        {project.services.slice(0, 3).map((s: string) => (
+                          <span key={s} className="px-2 py-1 bg-green-50 text-green-600 text-xs rounded-full">
+                            {s}
+                          </span>
+                        ))}
+                        {project.services.length > 3 && (
+                          <span className="px-2 py-1 bg-gray-100 text-gray-500 text-xs rounded-full">
+                            +{project.services.length - 3}
+                          </span>
+                        )}
+                      </div>
+                    )}
 
                     {/* Stats */}
-                    {(project.salesAmount || project.productCount || project.rating) && (
+                    {(project.monthlySales || project.productCount || project.rating) && (
                       <div className="grid grid-cols-3 gap-4 pt-4 border-t border-[#E8EEF2]">
-                        {project.salesAmount && (
+                        {project.monthlySales && (
                           <div className="text-center">
-                            <p className="font-display text-xl font-bold text-gradient-luxury">{project.salesAmount}</p>
-                            <p className="text-xs text-[#9EA7AA] mt-1">매출</p>
+                            <p className="font-display text-xl font-bold text-gradient-luxury">{project.monthlySales}</p>
+                            <p className="text-xs text-[#9EA7AA] mt-1">월매출</p>
                           </div>
                         )}
                         {project.productCount && (
@@ -222,6 +279,13 @@ export default function PortfolioPage() {
                             <p className="text-xs text-[#9EA7AA] mt-1">평점</p>
                           </div>
                         )}
+                      </div>
+                    )}
+
+                    {/* Achievement */}
+                    {project.achievement && (
+                      <div className="mt-4 pt-4 border-t border-[#E8EEF2]">
+                        <p className="text-sm text-[#5A7A8A] font-medium">{project.achievement}</p>
                       </div>
                     )}
                   </div>
@@ -330,6 +394,196 @@ export default function PortfolioPage() {
           </div>
         </div>
       </section>
+
+      {/* Portfolio Detail Modal */}
+      {selectedPortfolio && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={() => setSelectedPortfolio(null)}
+        >
+          <div
+            className="bg-white rounded-[2rem] w-full max-w-4xl max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header Image */}
+            <div className="relative h-64 md:h-80">
+              <Image
+                src={selectedPortfolio.imageUrl}
+                alt={selectedPortfolio.title}
+                fill
+                className="object-cover"
+                unoptimized
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+
+              {/* Close Button */}
+              <button
+                onClick={() => setSelectedPortfolio(null)}
+                className="absolute top-4 right-4 w-10 h-10 bg-white/20 backdrop-blur rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+
+              {/* Brand Info */}
+              <div className="absolute bottom-6 left-6 right-6">
+                <div className="flex items-center gap-3 mb-3">
+                  <span className={`px-4 py-2 bg-gradient-to-r ${selectedPortfolio.gradient} text-white font-semibold rounded-full`}>
+                    {selectedPortfolio.brand}
+                  </span>
+                  <span className="px-3 py-1.5 bg-white/20 backdrop-blur text-white text-sm rounded-full">
+                    {getCategoryLabel(selectedPortfolio.category)}
+                  </span>
+                  {selectedPortfolio.projectYear && (
+                    <span className="px-3 py-1.5 bg-white/20 backdrop-blur text-white text-sm rounded-full">
+                      {selectedPortfolio.projectYear}
+                    </span>
+                  )}
+                </div>
+                <h2 className="text-2xl md:text-3xl font-bold text-white">
+                  {selectedPortfolio.title}
+                </h2>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 md:p-10">
+              {/* Stats Grid */}
+              {(selectedPortfolio.monthlySales || selectedPortfolio.productCount || selectedPortfolio.rating || selectedPortfolio.duration) && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+                  {selectedPortfolio.monthlySales && (
+                    <div className="bg-gradient-to-br from-[#8BA4B4]/10 to-[#8BA4B4]/5 rounded-2xl p-4 text-center">
+                      <p className="text-3xl font-bold text-[#5A7A8A]">{selectedPortfolio.monthlySales}</p>
+                      <p className="text-sm text-[#636E72] mt-1">월 매출</p>
+                    </div>
+                  )}
+                  {selectedPortfolio.productCount && (
+                    <div className="bg-gradient-to-br from-[#8BA4B4]/10 to-[#8BA4B4]/5 rounded-2xl p-4 text-center">
+                      <p className="text-3xl font-bold text-[#5A7A8A]">{selectedPortfolio.productCount}</p>
+                      <p className="text-sm text-[#636E72] mt-1">입점 상품</p>
+                    </div>
+                  )}
+                  {selectedPortfolio.rating && (
+                    <div className="bg-gradient-to-br from-[#8BA4B4]/10 to-[#8BA4B4]/5 rounded-2xl p-4 text-center">
+                      <p className="text-3xl font-bold text-[#5A7A8A]">{selectedPortfolio.rating}</p>
+                      <p className="text-sm text-[#636E72] mt-1">마켓 평점</p>
+                    </div>
+                  )}
+                  {selectedPortfolio.duration && (
+                    <div className="bg-gradient-to-br from-[#8BA4B4]/10 to-[#8BA4B4]/5 rounded-2xl p-4 text-center">
+                      <p className="text-3xl font-bold text-[#5A7A8A]">{selectedPortfolio.duration}</p>
+                      <p className="text-sm text-[#636E72] mt-1">소요 기간</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Achievement */}
+              {selectedPortfolio.achievement && (
+                <div className="mb-10 p-6 bg-gradient-to-r from-[#E8B4B8]/20 to-[#D4C4A8]/20 rounded-2xl">
+                  <p className="text-lg font-semibold text-[#2D3436]">{selectedPortfolio.achievement}</p>
+                </div>
+              )}
+
+              {/* Marketplaces & Services */}
+              <div className="grid md:grid-cols-2 gap-6 mb-10">
+                {selectedPortfolio.marketplaces && selectedPortfolio.marketplaces.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-[#636E72] uppercase tracking-wider mb-3">입점 마켓플레이스</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedPortfolio.marketplaces.map((m: string) => (
+                        <span key={m} className="px-4 py-2 bg-blue-50 text-blue-700 font-medium rounded-full">
+                          {m}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {selectedPortfolio.services && selectedPortfolio.services.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-[#636E72] uppercase tracking-wider mb-3">제공 서비스</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedPortfolio.services.map((s: string) => (
+                        <span key={s} className="px-4 py-2 bg-green-50 text-green-700 font-medium rounded-full">
+                          {s}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Story Section */}
+              {(selectedPortfolio.challenge || selectedPortfolio.solution || selectedPortfolio.results) && (
+                <div className="space-y-6">
+                  <h3 className="text-xl font-bold text-[#2D3436] border-b border-[#E8EEF2] pb-2">성공 스토리</h3>
+
+                  {selectedPortfolio.challenge && (
+                    <div className="flex gap-4">
+                      <div className="flex-shrink-0 w-10 h-10 bg-red-100 rounded-full flex items-center justify-center text-red-500 font-bold">1</div>
+                      <div>
+                        <h4 className="font-semibold text-[#2D3436] mb-2">도전 과제</h4>
+                        <p className="text-[#636E72] leading-relaxed">{selectedPortfolio.challenge}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedPortfolio.solution && (
+                    <div className="flex gap-4">
+                      <div className="flex-shrink-0 w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-500 font-bold">2</div>
+                      <div>
+                        <h4 className="font-semibold text-[#2D3436] mb-2">K-Glow 솔루션</h4>
+                        <p className="text-[#636E72] leading-relaxed">{selectedPortfolio.solution}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedPortfolio.results && (
+                    <div className="flex gap-4">
+                      <div className="flex-shrink-0 w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-green-500 font-bold">3</div>
+                      <div>
+                        <h4 className="font-semibold text-[#2D3436] mb-2">결과</h4>
+                        <p className="text-[#636E72] leading-relaxed">{selectedPortfolio.results}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Brand Website Link */}
+              {selectedPortfolio.brandWebsite && (
+                <div className="mt-10 pt-6 border-t border-[#E8EEF2]">
+                  <a
+                    href={selectedPortfolio.brandWebsite}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-[#5A7A8A] hover:text-[#4A6A7A] font-medium"
+                  >
+                    브랜드 웹사이트 방문
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  </a>
+                </div>
+              )}
+
+              {/* CTA */}
+              <div className="mt-10 text-center">
+                <Link
+                  href="/contact"
+                  className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-[#8BA4B4] to-[#6B8A9A] text-white font-semibold rounded-full hover:shadow-lg hover:shadow-[#8BA4B4]/30 transition-all duration-300"
+                >
+                  나도 성공하고 싶다면?
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                  </svg>
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

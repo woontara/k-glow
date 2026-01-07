@@ -58,16 +58,35 @@ export async function PUT(
     const portfolio = await prisma.portfolio.update({
       where: { id },
       data: {
-        ...(body.category && { category: body.category.toUpperCase() }),
+        // 브랜드 정보
         ...(body.brand && { brand: body.brand }),
+        ...(body.brandLogoUrl !== undefined && { brandLogoUrl: body.brandLogoUrl }),
+        ...(body.brandWebsite !== undefined && { brandWebsite: body.brandWebsite }),
+        ...(body.category && { category: body.category.toUpperCase() }),
+
+        // 프로젝트 정보
         ...(body.title && { title: body.title }),
-        ...(body.description && { description: body.description }),
-        ...(body.imageUrl && { imageUrl: body.imageUrl }),
-        ...(body.salesAmount !== undefined && { salesAmount: body.salesAmount }),
+        ...(body.marketplaces !== undefined && { marketplaces: body.marketplaces }),
+        ...(body.services !== undefined && { services: body.services }),
+        ...(body.projectYear !== undefined && { projectYear: body.projectYear }),
+        ...(body.duration !== undefined && { duration: body.duration }),
+
+        // 성과 지표
+        ...(body.monthlySales !== undefined && { monthlySales: body.monthlySales }),
         ...(body.productCount !== undefined && { productCount: body.productCount }),
         ...(body.rating !== undefined && { rating: body.rating }),
+        ...(body.achievement !== undefined && { achievement: body.achievement }),
+
+        // 스토리
+        ...(body.challenge !== undefined && { challenge: body.challenge }),
+        ...(body.solution !== undefined && { solution: body.solution }),
+        ...(body.results !== undefined && { results: body.results }),
+
+        // 표시 설정
+        ...(body.imageUrl && { imageUrl: body.imageUrl }),
         ...(body.gradient && { gradient: body.gradient }),
         ...(body.isActive !== undefined && { isActive: body.isActive }),
+        ...(body.isFeatured !== undefined && { isFeatured: body.isFeatured }),
         ...(body.order !== undefined && { order: body.order }),
       },
     });

@@ -13,11 +13,16 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const category = searchParams.get('category');
     const includeInactive = searchParams.get('includeInactive') === 'true';
+    const featured = searchParams.get('featured') === 'true';
 
     const where: any = {};
 
     if (!includeInactive) {
       where.isActive = true;
+    }
+
+    if (featured) {
+      where.isFeatured = true;
     }
 
     if (category && category !== 'all') {
@@ -60,25 +65,44 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     // 입력 검증
-    if (!body.category || !body.brand || !body.title || !body.description || !body.imageUrl) {
+    if (!body.brand || !body.title || !body.imageUrl || !body.category) {
       return NextResponse.json(
-        { error: '필수 정보가 누락되었습니다 (category, brand, title, description, imageUrl)' },
+        { error: '필수 정보가 누락되었습니다 (brand, title, imageUrl, category)' },
         { status: 400 }
       );
     }
 
     const portfolio = await prisma.portfolio.create({
       data: {
-        category: body.category.toUpperCase(),
+        // 브랜드 정보
         brand: body.brand,
+        brandLogoUrl: body.brandLogoUrl || null,
+        brandWebsite: body.brandWebsite || null,
+        category: body.category.toUpperCase(),
+
+        // 프로젝트 정보
         title: body.title,
-        description: body.description,
-        imageUrl: body.imageUrl,
-        salesAmount: body.salesAmount || null,
+        marketplaces: body.marketplaces || [],
+        services: body.services || [],
+        projectYear: body.projectYear || null,
+        duration: body.duration || null,
+
+        // 성과 지표
+        monthlySales: body.monthlySales || null,
         productCount: body.productCount || null,
         rating: body.rating || null,
+        achievement: body.achievement || null,
+
+        // 스토리
+        challenge: body.challenge || null,
+        solution: body.solution || null,
+        results: body.results || null,
+
+        // 표시 설정
+        imageUrl: body.imageUrl,
         gradient: body.gradient || 'from-[#8BA4B4] to-[#6B8A9A]',
         isActive: body.isActive !== false,
+        isFeatured: body.isFeatured || false,
         order: body.order || 0,
       },
     });

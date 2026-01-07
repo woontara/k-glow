@@ -8,16 +8,31 @@ import Image from 'next/image';
 
 interface Portfolio {
   id: string;
-  category: string;
+  // 브랜드 정보
   brand: string;
+  brandLogoUrl: string | null;
+  brandWebsite: string | null;
+  category: string;
+  // 프로젝트 정보
   title: string;
-  description: string;
-  imageUrl: string;
-  salesAmount: string | null;
+  marketplaces: string[];
+  services: string[];
+  projectYear: string | null;
+  duration: string | null;
+  // 성과 지표
+  monthlySales: string | null;
   productCount: string | null;
   rating: string | null;
+  achievement: string | null;
+  // 스토리
+  challenge: string | null;
+  solution: string | null;
+  results: string | null;
+  // 표시 설정
+  imageUrl: string;
   gradient: string;
   isActive: boolean;
+  isFeatured: boolean;
   order: number;
   createdAt: string;
 }
@@ -37,6 +52,28 @@ const CATEGORIES = [
   { value: 'SKINCARE', label: '스킨케어' },
   { value: 'MAKEUP', label: '메이크업' },
   { value: 'HAIRCARE', label: '헤어케어' },
+  { value: 'BODYCARE', label: '바디케어' },
+  { value: 'OTHER', label: '기타' },
+];
+
+const MARKETPLACES = [
+  'Wildberries',
+  'Ozon',
+  'YandexMarket',
+  'Lamoda',
+  'AliExpress Russia',
+  'SberMegaMarket',
+];
+
+const SERVICES = [
+  'EAC 인증',
+  'GOST 인증',
+  '입점 대행',
+  '물류 지원',
+  '마케팅',
+  '상품페이지 제작',
+  '번역 서비스',
+  '고객 CS 대행',
 ];
 
 const GRADIENTS = [
@@ -60,16 +97,31 @@ export default function AdminPortfolioPage() {
 
   // 폼 상태
   const [formData, setFormData] = useState({
-    category: 'SKINCARE',
+    // 브랜드 정보
     brand: '',
+    brandLogoUrl: '',
+    brandWebsite: '',
+    category: 'SKINCARE',
+    // 프로젝트 정보
     title: '',
-    description: '',
-    imageUrl: '',
-    salesAmount: '',
+    marketplaces: [] as string[],
+    services: [] as string[],
+    projectYear: '',
+    duration: '',
+    // 성과 지표
+    monthlySales: '',
     productCount: '',
     rating: '',
+    achievement: '',
+    // 스토리
+    challenge: '',
+    solution: '',
+    results: '',
+    // 표시 설정
+    imageUrl: '',
     gradient: 'from-[#8BA4B4] to-[#6B8A9A]',
     isActive: true,
+    isFeatured: false,
     order: 0,
     // Testimonial용
     name: '',
@@ -111,16 +163,26 @@ export default function AdminPortfolioPage() {
 
   const resetForm = () => {
     setFormData({
-      category: 'SKINCARE',
       brand: '',
+      brandLogoUrl: '',
+      brandWebsite: '',
+      category: 'SKINCARE',
       title: '',
-      description: '',
-      imageUrl: '',
-      salesAmount: '',
+      marketplaces: [],
+      services: [],
+      projectYear: '',
+      duration: '',
+      monthlySales: '',
       productCount: '',
       rating: '',
+      achievement: '',
+      challenge: '',
+      solution: '',
+      results: '',
+      imageUrl: '',
       gradient: 'from-[#8BA4B4] to-[#6B8A9A]',
       isActive: true,
+      isFeatured: false,
       order: 0,
       name: '',
       company: '',
@@ -135,16 +197,26 @@ export default function AdminPortfolioPage() {
       if (activeTab === 'portfolio') {
         const p = item as Portfolio;
         setFormData({
-          category: p.category,
           brand: p.brand,
+          brandLogoUrl: p.brandLogoUrl || '',
+          brandWebsite: p.brandWebsite || '',
+          category: p.category,
           title: p.title,
-          description: p.description,
-          imageUrl: p.imageUrl,
-          salesAmount: p.salesAmount || '',
+          marketplaces: p.marketplaces || [],
+          services: p.services || [],
+          projectYear: p.projectYear || '',
+          duration: p.duration || '',
+          monthlySales: p.monthlySales || '',
           productCount: p.productCount || '',
           rating: p.rating || '',
+          achievement: p.achievement || '',
+          challenge: p.challenge || '',
+          solution: p.solution || '',
+          results: p.results || '',
+          imageUrl: p.imageUrl,
           gradient: p.gradient,
           isActive: p.isActive,
+          isFeatured: p.isFeatured,
           order: p.order,
           name: '',
           company: '',
@@ -177,16 +249,26 @@ export default function AdminPortfolioPage() {
       let body: any;
       if (activeTab === 'portfolio') {
         body = {
-          category: formData.category,
           brand: formData.brand,
+          brandLogoUrl: formData.brandLogoUrl || null,
+          brandWebsite: formData.brandWebsite || null,
+          category: formData.category,
           title: formData.title,
-          description: formData.description,
-          imageUrl: formData.imageUrl,
-          salesAmount: formData.salesAmount || null,
+          marketplaces: formData.marketplaces,
+          services: formData.services,
+          projectYear: formData.projectYear || null,
+          duration: formData.duration || null,
+          monthlySales: formData.monthlySales || null,
           productCount: formData.productCount || null,
           rating: formData.rating || null,
+          achievement: formData.achievement || null,
+          challenge: formData.challenge || null,
+          solution: formData.solution || null,
+          results: formData.results || null,
+          imageUrl: formData.imageUrl,
           gradient: formData.gradient,
           isActive: formData.isActive,
+          isFeatured: formData.isFeatured,
           order: formData.order,
         };
       } else {
@@ -253,6 +335,40 @@ export default function AdminPortfolioPage() {
     } catch (error) {
       console.error('상태 변경 실패:', error);
     }
+  };
+
+  const toggleFeatured = async (item: Portfolio) => {
+    try {
+      const res = await fetch(`/api/portfolio/${item.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isFeatured: !item.isFeatured }),
+      });
+
+      if (res.ok) {
+        fetchData();
+      }
+    } catch (error) {
+      console.error('피처드 상태 변경 실패:', error);
+    }
+  };
+
+  const toggleMarketplace = (marketplace: string) => {
+    setFormData(prev => ({
+      ...prev,
+      marketplaces: prev.marketplaces.includes(marketplace)
+        ? prev.marketplaces.filter(m => m !== marketplace)
+        : [...prev.marketplaces, marketplace]
+    }));
+  };
+
+  const toggleService = (service: string) => {
+    setFormData(prev => ({
+      ...prev,
+      services: prev.services.includes(service)
+        ? prev.services.filter(s => s !== service)
+        : [...prev.services, service]
+    }));
   };
 
   if (status === 'loading' || loading) {
@@ -340,13 +456,18 @@ export default function AdminPortfolioPage() {
 
                   {/* 정보 */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <span className={`px-2 py-1 text-xs font-medium rounded bg-gradient-to-r ${p.gradient} text-white`}>
                         {p.brand}
                       </span>
                       <span className="px-2 py-1 text-xs font-medium rounded bg-gray-100 text-gray-600">
                         {CATEGORIES.find(c => c.value === p.category)?.label}
                       </span>
+                      {p.isFeatured && (
+                        <span className="px-2 py-1 text-xs font-medium rounded bg-yellow-100 text-yellow-700">
+                          메인 노출
+                        </span>
+                      )}
                       {!p.isActive && (
                         <span className="px-2 py-1 text-xs font-medium rounded bg-red-100 text-red-600">
                           비활성
@@ -354,16 +475,42 @@ export default function AdminPortfolioPage() {
                       )}
                     </div>
                     <h3 className="text-lg font-semibold text-gray-900">{p.title}</h3>
-                    <p className="text-gray-600 text-sm mt-1 line-clamp-2">{p.description}</p>
+
+                    {/* 마켓플레이스 & 서비스 */}
+                    <div className="flex gap-2 mt-2 flex-wrap">
+                      {p.marketplaces?.map((m: string) => (
+                        <span key={m} className="px-2 py-0.5 text-xs bg-blue-50 text-blue-600 rounded">
+                          {m}
+                        </span>
+                      ))}
+                      {p.services?.map((s: string) => (
+                        <span key={s} className="px-2 py-0.5 text-xs bg-green-50 text-green-600 rounded">
+                          {s}
+                        </span>
+                      ))}
+                    </div>
+
+                    {/* 성과 지표 */}
                     <div className="flex gap-4 mt-2 text-sm text-gray-500">
-                      {p.salesAmount && <span>매출: {p.salesAmount}</span>}
+                      {p.monthlySales && <span>월매출: {p.monthlySales}</span>}
                       {p.productCount && <span>상품: {p.productCount}</span>}
                       {p.rating && <span>평점: {p.rating}</span>}
+                      {p.projectYear && <span>연도: {p.projectYear}</span>}
                     </div>
                   </div>
 
                   {/* 액션 버튼 */}
-                  <div className="flex gap-2 flex-shrink-0">
+                  <div className="flex gap-2 flex-shrink-0 flex-wrap">
+                    <button
+                      onClick={() => toggleFeatured(p)}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium ${
+                        p.isFeatured
+                          ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      {p.isFeatured ? '메인 해제' : '메인 노출'}
+                    </button>
                     <button
                       onClick={() => toggleActive(p)}
                       className={`px-3 py-2 rounded-lg text-sm font-medium ${
@@ -466,109 +613,319 @@ export default function AdminPortfolioPage() {
       {/* 모달 */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-200">
               <h2 className="text-xl font-bold text-gray-900">
                 {editItem ? '수정하기' : '새로 추가하기'}
               </h2>
             </div>
 
-            <div className="p-6 space-y-4">
+            <div className="p-6 space-y-6">
               {activeTab === 'portfolio' ? (
                 <>
-                  {/* 카테고리 */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">카테고리 *</label>
-                    <select
-                      value={formData.category}
-                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8BA4B4] focus:border-transparent"
-                    >
-                      {CATEGORIES.map((c) => (
-                        <option key={c.value} value={c.value}>{c.label}</option>
-                      ))}
-                    </select>
+                  {/* 브랜드 정보 섹션 */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">브랜드 정보</h3>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* 브랜드명 */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">브랜드명 *</label>
+                        <input
+                          type="text"
+                          value={formData.brand}
+                          onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+                          placeholder="예: 수오가닉"
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8BA4B4] focus:border-transparent"
+                        />
+                      </div>
+
+                      {/* 카테고리 */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">카테고리 *</label>
+                        <select
+                          value={formData.category}
+                          onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8BA4B4] focus:border-transparent"
+                        >
+                          {CATEGORIES.map((c) => (
+                            <option key={c.value} value={c.value}>{c.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* 브랜드 로고 URL */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">브랜드 로고 URL</label>
+                        <input
+                          type="text"
+                          value={formData.brandLogoUrl}
+                          onChange={(e) => setFormData({ ...formData, brandLogoUrl: e.target.value })}
+                          placeholder="https://..."
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8BA4B4] focus:border-transparent"
+                        />
+                      </div>
+
+                      {/* 브랜드 웹사이트 */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">브랜드 웹사이트</label>
+                        <input
+                          type="text"
+                          value={formData.brandWebsite}
+                          onChange={(e) => setFormData({ ...formData, brandWebsite: e.target.value })}
+                          placeholder="https://..."
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8BA4B4] focus:border-transparent"
+                        />
+                      </div>
+                    </div>
                   </div>
 
-                  {/* 브랜드명 */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">브랜드명 *</label>
-                    <input
-                      type="text"
-                      value={formData.brand}
-                      onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-                      placeholder="예: 클린코스메틱"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8BA4B4] focus:border-transparent"
-                    />
-                  </div>
+                  {/* 프로젝트 정보 섹션 */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">프로젝트 정보</h3>
 
-                  {/* 제목 */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">제목 *</label>
-                    <input
-                      type="text"
-                      value={formData.title}
-                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                      placeholder="예: Ozon 마켓 입점 성공"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8BA4B4] focus:border-transparent"
-                    />
-                  </div>
-
-                  {/* 설명 */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">설명 *</label>
-                    <textarea
-                      value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      placeholder="프로젝트에 대한 상세 설명을 입력하세요"
-                      rows={3}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8BA4B4] focus:border-transparent"
-                    />
-                  </div>
-
-                  {/* 이미지 URL */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">이미지 URL *</label>
-                    <input
-                      type="text"
-                      value={formData.imageUrl}
-                      onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                      placeholder="https://..."
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8BA4B4] focus:border-transparent"
-                    />
-                  </div>
-
-                  {/* 통계 */}
-                  <div className="grid grid-cols-3 gap-4">
+                    {/* 제목 (핵심 성과) */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">매출</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">핵심 성과 한줄 *</label>
                       <input
                         type="text"
-                        value={formData.salesAmount}
-                        onChange={(e) => setFormData({ ...formData, salesAmount: e.target.value })}
-                        placeholder="예: 5억+"
+                        value={formData.title}
+                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                        placeholder="예: Wildberries 입점 3개월 만에 월 매출 5억 달성"
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8BA4B4] focus:border-transparent"
                       />
                     </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* 프로젝트 연도 */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">프로젝트 연도</label>
+                        <input
+                          type="text"
+                          value={formData.projectYear}
+                          onChange={(e) => setFormData({ ...formData, projectYear: e.target.value })}
+                          placeholder="예: 2024"
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8BA4B4] focus:border-transparent"
+                        />
+                      </div>
+
+                      {/* 소요 기간 */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">소요 기간</label>
+                        <input
+                          type="text"
+                          value={formData.duration}
+                          onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
+                          placeholder="예: 3개월"
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8BA4B4] focus:border-transparent"
+                        />
+                      </div>
+                    </div>
+
+                    {/* 마켓플레이스 선택 */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">상품 수</label>
-                      <input
-                        type="text"
-                        value={formData.productCount}
-                        onChange={(e) => setFormData({ ...formData, productCount: e.target.value })}
-                        placeholder="예: 12종"
+                      <label className="block text-sm font-medium text-gray-700 mb-2">입점 마켓플레이스</label>
+                      <div className="flex flex-wrap gap-2">
+                        {MARKETPLACES.map((m) => (
+                          <button
+                            key={m}
+                            type="button"
+                            onClick={() => toggleMarketplace(m)}
+                            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                              formData.marketplaces.includes(m)
+                                ? 'bg-blue-500 text-white'
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            }`}
+                          >
+                            {m}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* 서비스 선택 */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">제공 서비스</label>
+                      <div className="flex flex-wrap gap-2">
+                        {SERVICES.map((s) => (
+                          <button
+                            key={s}
+                            type="button"
+                            onClick={() => toggleService(s)}
+                            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                              formData.services.includes(s)
+                                ? 'bg-green-500 text-white'
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            }`}
+                          >
+                            {s}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 성과 지표 섹션 */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">성과 지표</h3>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">월 매출</label>
+                        <input
+                          type="text"
+                          value={formData.monthlySales}
+                          onChange={(e) => setFormData({ ...formData, monthlySales: e.target.value })}
+                          placeholder="예: 5억+"
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8BA4B4] focus:border-transparent"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">입점 상품 수</label>
+                        <input
+                          type="text"
+                          value={formData.productCount}
+                          onChange={(e) => setFormData({ ...formData, productCount: e.target.value })}
+                          placeholder="예: 12종"
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8BA4B4] focus:border-transparent"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">마켓플레이스 평점</label>
+                        <input
+                          type="text"
+                          value={formData.rating}
+                          onChange={(e) => setFormData({ ...formData, rating: e.target.value })}
+                          placeholder="예: 4.8"
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8BA4B4] focus:border-transparent"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">주요 성과</label>
+                        <input
+                          type="text"
+                          value={formData.achievement}
+                          onChange={(e) => setFormData({ ...formData, achievement: e.target.value })}
+                          placeholder="예: 뷰티 카테고리 TOP 10 진입"
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8BA4B4] focus:border-transparent"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 스토리 섹션 */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">성공 스토리</h3>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">고객의 도전 과제/니즈</label>
+                      <textarea
+                        value={formData.challenge}
+                        onChange={(e) => setFormData({ ...formData, challenge: e.target.value })}
+                        placeholder="예: 러시아 시장 진출을 원했지만 인증 절차와 마켓플레이스 입점이 막막했습니다..."
+                        rows={2}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8BA4B4] focus:border-transparent"
                       />
                     </div>
+
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">평점</label>
-                      <input
-                        type="text"
-                        value={formData.rating}
-                        onChange={(e) => setFormData({ ...formData, rating: e.target.value })}
-                        placeholder="예: 4.8"
+                      <label className="block text-sm font-medium text-gray-700 mb-1">K-Glow의 솔루션</label>
+                      <textarea
+                        value={formData.solution}
+                        onChange={(e) => setFormData({ ...formData, solution: e.target.value })}
+                        placeholder="예: EAC 인증부터 Wildberries 입점, 상품페이지 제작까지 원스톱으로 지원했습니다..."
+                        rows={2}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8BA4B4] focus:border-transparent"
                       />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">결과/성과 상세</label>
+                      <textarea
+                        value={formData.results}
+                        onChange={(e) => setFormData({ ...formData, results: e.target.value })}
+                        placeholder="예: 입점 3개월 만에 뷰티 카테고리 상위 10위권 진입, 월 매출 5억 달성..."
+                        rows={2}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8BA4B4] focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+
+                  {/* 표시 설정 섹션 */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">표시 설정</h3>
+
+                    {/* 이미지 URL */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">대표 이미지 URL *</label>
+                      <input
+                        type="text"
+                        value={formData.imageUrl}
+                        onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                        placeholder="https://..."
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8BA4B4] focus:border-transparent"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* 그라데이션 색상 */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">색상 테마</label>
+                        <select
+                          value={formData.gradient}
+                          onChange={(e) => setFormData({ ...formData, gradient: e.target.value })}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8BA4B4] focus:border-transparent"
+                        >
+                          {GRADIENTS.map((g) => (
+                            <option key={g.value} value={g.value}>{g.label}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* 정렬 순서 */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">정렬 순서</label>
+                        <input
+                          type="number"
+                          value={formData.order}
+                          onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) || 0 })}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8BA4B4] focus:border-transparent"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">낮은 숫자가 먼저 표시됩니다</p>
+                      </div>
+                    </div>
+
+                    {/* 체크박스 옵션들 */}
+                    <div className="flex gap-6">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="isActive"
+                          checked={formData.isActive}
+                          onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                          className="w-4 h-4 text-[#8BA4B4] rounded"
+                        />
+                        <label htmlFor="isActive" className="text-sm font-medium text-gray-700">
+                          활성화
+                        </label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="isFeatured"
+                          checked={formData.isFeatured}
+                          onChange={(e) => setFormData({ ...formData, isFeatured: e.target.checked })}
+                          className="w-4 h-4 text-yellow-500 rounded"
+                        />
+                        <label htmlFor="isFeatured" className="text-sm font-medium text-gray-700">
+                          메인 페이지 노출
+                        </label>
+                      </div>
                     </div>
                   </div>
                 </>
@@ -609,48 +966,48 @@ export default function AdminPortfolioPage() {
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8BA4B4] focus:border-transparent"
                     />
                   </div>
+
+                  {/* 그라데이션 색상 */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">색상 테마</label>
+                    <select
+                      value={formData.gradient}
+                      onChange={(e) => setFormData({ ...formData, gradient: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8BA4B4] focus:border-transparent"
+                    >
+                      {GRADIENTS.map((g) => (
+                        <option key={g.value} value={g.value}>{g.label}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* 정렬 순서 */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">정렬 순서</label>
+                    <input
+                      type="number"
+                      value={formData.order}
+                      onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) || 0 })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8BA4B4] focus:border-transparent"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">낮은 숫자가 먼저 표시됩니다</p>
+                  </div>
+
+                  {/* 활성화 상태 */}
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="isActiveTestimonial"
+                      checked={formData.isActive}
+                      onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                      className="w-4 h-4 text-[#8BA4B4] rounded"
+                    />
+                    <label htmlFor="isActiveTestimonial" className="text-sm font-medium text-gray-700">
+                      활성화 (체크 해제 시 사이트에 표시되지 않음)
+                    </label>
+                  </div>
                 </>
               )}
-
-              {/* 그라데이션 색상 */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">색상 테마</label>
-                <select
-                  value={formData.gradient}
-                  onChange={(e) => setFormData({ ...formData, gradient: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8BA4B4] focus:border-transparent"
-                >
-                  {GRADIENTS.map((g) => (
-                    <option key={g.value} value={g.value}>{g.label}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* 정렬 순서 */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">정렬 순서</label>
-                <input
-                  type="number"
-                  value={formData.order}
-                  onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) || 0 })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8BA4B4] focus:border-transparent"
-                />
-                <p className="text-xs text-gray-500 mt-1">낮은 숫자가 먼저 표시됩니다</p>
-              </div>
-
-              {/* 활성화 상태 */}
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="isActive"
-                  checked={formData.isActive}
-                  onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                  className="w-4 h-4 text-[#8BA4B4] rounded"
-                />
-                <label htmlFor="isActive" className="text-sm font-medium text-gray-700">
-                  활성화 (체크 해제 시 사이트에 표시되지 않음)
-                </label>
-              </div>
             </div>
 
             <div className="p-6 border-t border-gray-200 flex gap-3 justify-end">
