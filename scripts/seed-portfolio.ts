@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, PortfolioCategory } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -9,7 +9,7 @@ async function main() {
       brand: '수오가닉',
       brandLogoUrl: null,
       brandWebsite: 'https://suorganic.co.kr/',
-      category: 'SKINCARE',
+      category: 'SKINCARE' as PortfolioCategory,
       title: 'Wildberries 입점 3개월 만에 뷰티 카테고리 TOP 50 진입',
       marketplaces: ['Wildberries', 'Ozon'],
       services: ['EAC 인증', '입점 대행', '상품페이지 제작', '마케팅'],
@@ -32,7 +32,7 @@ async function main() {
       brand: '글로우랩',
       brandLogoUrl: null,
       brandWebsite: null,
-      category: 'MAKEUP',
+      category: 'MAKEUP' as PortfolioCategory,
       title: 'Ozon 메이크업 부문 베스트셀러 달성',
       marketplaces: ['Ozon', 'Lamoda'],
       services: ['EAC 인증', 'GOST 인증', '입점 대행', '물류 지원'],
@@ -55,7 +55,7 @@ async function main() {
       brand: '네이처힐',
       brandLogoUrl: null,
       brandWebsite: null,
-      category: 'HAIRCARE',
+      category: 'HAIRCARE' as PortfolioCategory,
       title: 'Wildberries 헤어케어 신규 브랜드 1위',
       marketplaces: ['Wildberries'],
       services: ['EAC 인증', '입점 대행', '번역 서비스', '마케팅'],
