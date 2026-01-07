@@ -56,25 +56,6 @@ export default function Footer() {
                 <a href="/terms" className="hover:text-blue-600">이용약관</a>
               </li>
             </ul>
-            <div className="mt-4">
-              <p className="text-xs text-gray-500">
-                Powered by Claude AI
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* 구분선 */}
-        <div className="border-t mt-8 pt-6">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-gray-500">
-            <div>
-              <span>기술 스택: Next.js 14 · TypeScript · Tailwind CSS · Prisma · Claude API</span>
-            </div>
-            <div className="flex gap-4">
-              <span>🇰🇷 한국</span>
-              <span>→</span>
-              <span>🇷🇺 러시아</span>
-            </div>
           </div>
         </div>
       </div>
