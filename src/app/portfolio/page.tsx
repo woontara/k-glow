@@ -4,102 +4,80 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 
+interface Portfolio {
+  id: string;
+  category: string;
+  brand: string;
+  title: string;
+  description: string;
+  imageUrl: string;
+  salesAmount: string | null;
+  productCount: string | null;
+  rating: string | null;
+  gradient: string;
+}
+
+interface Testimonial {
+  id: string;
+  name: string;
+  company: string;
+  content: string;
+  gradient: string;
+}
+
 export default function PortfolioPage() {
   const [mounted, setMounted] = useState(false);
   const [filter, setFilter] = useState('all');
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const categories = [
     { id: 'all', label: '전체', icon: '🎯' },
-    { id: 'skincare', label: '스킨케어', icon: '💧' },
-    { id: 'makeup', label: '메이크업', icon: '💄' },
-    { id: 'haircare', label: '헤어케어', icon: '💇' },
+    { id: 'SKINCARE', label: '스킨케어', icon: '💧' },
+    { id: 'MAKEUP', label: '메이크업', icon: '💄' },
+    { id: 'HAIRCARE', label: '헤어케어', icon: '💇' },
   ];
 
-  const projects = [
-    {
-      id: 1,
-      category: 'skincare',
-      brand: '클린코스메틱',
-      title: 'Ozon 마켓 입점 성공',
-      desc: '비건 스킨케어 라인 러시아 론칭. 입점 3개월 만에 월 매출 5억 달성.',
-      image: 'https://images.unsplash.com/photo-1556228720-195a672e8a03?w=600&h=400&fit=crop',
-      stats: { sales: '5억+', products: '12종', rating: '4.8' },
-      gradient: 'from-[#8BA4B4] to-[#6B8A9A]',
-    },
-    {
-      id: 2,
-      category: 'makeup',
-      brand: '뷰티브랜드',
-      title: 'Wildberries 베스트셀러',
-      desc: '쿠션 파운데이션 러시아 전역 판매. 뷰티 카테고리 TOP 10 진입.',
-      image: 'https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=600&h=400&fit=crop',
-      stats: { sales: '3억+', products: '8종', rating: '4.9' },
-      gradient: 'from-[#E8B4B8] to-[#C8949A]',
-    },
-    {
-      id: 3,
-      category: 'skincare',
-      brand: '럭셔리스킨',
-      title: '프리미엄 안티에이징 라인',
-      desc: '고급 백화점 입점 및 VIP 고객 대상 마케팅 성공.',
-      image: 'https://images.unsplash.com/photo-1570194065650-d99fb4b8ccb0?w=600&h=400&fit=crop',
-      stats: { sales: '8억+', products: '6종', rating: '4.7' },
-      gradient: 'from-[#D4C4A8] to-[#B4A488]',
-    },
-    {
-      id: 4,
-      category: 'haircare',
-      brand: '실크헤어',
-      title: '헤어케어 시장 진출',
-      desc: '탈모 방지 샴푸 러시아 시장 론칭. 의약외품 인증 완료.',
-      image: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=600&h=400&fit=crop',
-      stats: { sales: '2억+', products: '4종', rating: '4.6' },
-      gradient: 'from-[#A4B4A8] to-[#849488]',
-    },
-    {
-      id: 5,
-      category: 'makeup',
-      brand: '컬러팝',
-      title: '립스틱 컬렉션 히트',
-      desc: '한국 트렌드 컬러 립스틱 러시아 인플루언서 마케팅 대성공.',
-      image: 'https://images.unsplash.com/photo-1586495777744-4413f21062fa?w=600&h=400&fit=crop',
-      stats: { sales: '4억+', products: '20종', rating: '4.8' },
-      gradient: 'from-[#9BB4C4] to-[#7A9AAD]',
-    },
-    {
-      id: 6,
-      category: 'skincare',
-      brand: '아쿠아뷰티',
-      title: '수분 크림 베스트셀러',
-      desc: '건조한 러시아 기후에 맞춘 고보습 라인 현지화 성공.',
-      image: 'https://images.unsplash.com/photo-1611930022073-b7a4ba5fcccd?w=600&h=400&fit=crop',
-      stats: { sales: '6억+', products: '5종', rating: '4.9' },
-      gradient: 'from-[#7A9AAD] to-[#5A7A8A]',
-    },
-  ];
+  useEffect(() => {
+    setMounted(true);
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const [portfolioRes, testimonialRes] = await Promise.all([
+        fetch('/api/portfolio'),
+        fetch('/api/testimonial'),
+      ]);
+
+      if (portfolioRes.ok) {
+        const data = await portfolioRes.json();
+        setPortfolios(data.portfolios);
+      }
+
+      if (testimonialRes.ok) {
+        const data = await testimonialRes.json();
+        setTestimonials(data.testimonials);
+      }
+    } catch (error) {
+      console.error('데이터 로딩 실패:', error);
+    }
+    setLoading(false);
+  };
 
   const filteredProjects = filter === 'all'
-    ? projects
-    : projects.filter(p => p.category === filter);
+    ? portfolios
+    : portfolios.filter(p => p.category === filter);
 
-  const testimonials = [
-    {
-      name: '김대표',
-      company: '클린코스메틱',
-      text: 'K-Glow 덕분에 복잡한 러시아 인증을 쉽게 해결했습니다. 전문적인 서포트에 감사드립니다.',
-      gradient: 'from-[#8BA4B4] to-[#6B8A9A]',
-    },
-    {
-      name: '박이사',
-      company: '뷰티브랜드',
-      text: '현지 마케팅까지 원스톱으로 지원받아서 빠르게 시장에 안착할 수 있었습니다.',
-      gradient: 'from-[#A4B4A8] to-[#849488]',
-    },
-  ];
+  const getCategoryLabel = (category: string) => {
+    switch (category) {
+      case 'SKINCARE': return '스킨케어';
+      case 'MAKEUP': return '메이크업';
+      case 'HAIRCARE': return '헤어케어';
+      default: return category;
+    }
+  };
 
   return (
     <main className="min-h-screen bg-gradient-luxury relative overflow-hidden">
@@ -174,67 +152,83 @@ export default function PortfolioPage() {
       {/* Projects Grid */}
       <section className="relative pb-24 px-6">
         <div className="max-w-7xl mx-auto">
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredProjects.map((project, index) => (
-              <div
-                key={project.id}
-                className={`card-luxury rounded-[2rem] overflow-hidden group ${mounted ? 'animate-reveal' : 'opacity-0'}`}
-                style={{ animationDelay: `${(index + 4) * 100}ms` }}
-              >
-                {/* Image */}
-                <div className="relative h-56 overflow-hidden">
-                  <Image
-                    src={project.image}
-                    alt={project.title}
-                    fill
-                    className="object-cover transition-transform duration-700 group-hover:scale-110"
-                    unoptimized
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+          {loading ? (
+            <div className="text-center py-12 text-[#636E72]">로딩 중...</div>
+          ) : filteredProjects.length === 0 ? (
+            <div className="text-center py-12 text-[#636E72]">
+              등록된 성공 사례가 없습니다
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {filteredProjects.map((project, index) => (
+                <div
+                  key={project.id}
+                  className={`card-luxury rounded-[2rem] overflow-hidden group ${mounted ? 'animate-reveal' : 'opacity-0'}`}
+                  style={{ animationDelay: `${(index + 4) * 100}ms` }}
+                >
+                  {/* Image */}
+                  <div className="relative h-56 overflow-hidden">
+                    <Image
+                      src={project.imageUrl}
+                      alt={project.title}
+                      fill
+                      className="object-cover transition-transform duration-700 group-hover:scale-110"
+                      unoptimized
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
 
-                  {/* Brand Badge */}
-                  <div className="absolute top-4 left-4">
-                    <span className={`px-4 py-2 bg-gradient-to-r ${project.gradient} text-white text-xs font-semibold rounded-full shadow-lg`}>
-                      {project.brand}
-                    </span>
+                    {/* Brand Badge */}
+                    <div className="absolute top-4 left-4">
+                      <span className={`px-4 py-2 bg-gradient-to-r ${project.gradient} text-white text-xs font-semibold rounded-full shadow-lg`}>
+                        {project.brand}
+                      </span>
+                    </div>
+
+                    {/* Hover Overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#2D3436]/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-end p-6">
+                      <div className="text-white">
+                        <p className="text-sm opacity-80">{getCategoryLabel(project.category)}</p>
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Hover Overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#2D3436]/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-end p-6">
-                    <div className="text-white">
-                      <p className="text-sm opacity-80">{project.category === 'skincare' ? '스킨케어' : project.category === 'makeup' ? '메이크업' : '헤어케어'}</p>
-                    </div>
+                  {/* Content */}
+                  <div className="p-6">
+                    <h3 className="font-display text-xl font-semibold text-[#2D3436] mb-2 group-hover:text-[#5A7A8A] transition-colors">
+                      {project.title}
+                    </h3>
+                    <p className="text-[#636E72] text-sm mb-6 leading-relaxed">
+                      {project.description}
+                    </p>
+
+                    {/* Stats */}
+                    {(project.salesAmount || project.productCount || project.rating) && (
+                      <div className="grid grid-cols-3 gap-4 pt-4 border-t border-[#E8EEF2]">
+                        {project.salesAmount && (
+                          <div className="text-center">
+                            <p className="font-display text-xl font-bold text-gradient-luxury">{project.salesAmount}</p>
+                            <p className="text-xs text-[#9EA7AA] mt-1">매출</p>
+                          </div>
+                        )}
+                        {project.productCount && (
+                          <div className="text-center">
+                            <p className="font-display text-xl font-bold text-gradient-luxury">{project.productCount}</p>
+                            <p className="text-xs text-[#9EA7AA] mt-1">상품</p>
+                          </div>
+                        )}
+                        {project.rating && (
+                          <div className="text-center">
+                            <p className="font-display text-xl font-bold text-gradient-luxury">{project.rating}</p>
+                            <p className="text-xs text-[#9EA7AA] mt-1">평점</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
-
-                {/* Content */}
-                <div className="p-6">
-                  <h3 className="font-display text-xl font-semibold text-[#2D3436] mb-2 group-hover:text-[#5A7A8A] transition-colors">
-                    {project.title}
-                  </h3>
-                  <p className="text-[#636E72] text-sm mb-6 leading-relaxed">
-                    {project.desc}
-                  </p>
-
-                  {/* Stats */}
-                  <div className="grid grid-cols-3 gap-4 pt-4 border-t border-[#E8EEF2]">
-                    <div className="text-center">
-                      <p className="font-display text-xl font-bold text-gradient-luxury">{project.stats.sales}</p>
-                      <p className="text-xs text-[#9EA7AA] mt-1">매출</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="font-display text-xl font-bold text-gradient-luxury">{project.stats.products}</p>
-                      <p className="text-xs text-[#9EA7AA] mt-1">상품</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="font-display text-xl font-bold text-gradient-luxury">{project.stats.rating}</p>
-                      <p className="text-xs text-[#9EA7AA] mt-1">평점</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
@@ -252,36 +246,42 @@ export default function PortfolioPage() {
             </h2>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-8">
-            {testimonials.map((testimonial, i) => (
-              <div
-                key={i}
-                className={`card-luxury rounded-[2rem] p-8 ${mounted ? 'animate-reveal' : 'opacity-0'}`}
-                style={{ animationDelay: `${(i + 10) * 100}ms` }}
-              >
-                {/* Quote Icon */}
-                <div className="mb-6">
-                  <svg className="w-10 h-10 text-[#8BA4B4]/30" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z" />
-                  </svg>
-                </div>
-
-                <p className="text-[#636E72] text-lg leading-relaxed mb-8">
-                  &ldquo;{testimonial.text}&rdquo;
-                </p>
-
-                <div className="flex items-center gap-4">
-                  <div className={`w-14 h-14 bg-gradient-to-br ${testimonial.gradient} rounded-full flex items-center justify-center text-white text-xl font-display font-bold shadow-lg`}>
-                    {testimonial.name[0]}
+          {testimonials.length === 0 ? (
+            <div className="text-center py-12 text-[#636E72]">
+              등록된 고객 후기가 없습니다
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-2 gap-8">
+              {testimonials.map((testimonial, i) => (
+                <div
+                  key={testimonial.id}
+                  className={`card-luxury rounded-[2rem] p-8 ${mounted ? 'animate-reveal' : 'opacity-0'}`}
+                  style={{ animationDelay: `${(i + 10) * 100}ms` }}
+                >
+                  {/* Quote Icon */}
+                  <div className="mb-6">
+                    <svg className="w-10 h-10 text-[#8BA4B4]/30" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z" />
+                    </svg>
                   </div>
-                  <div>
-                    <p className="font-semibold text-[#2D3436]">{testimonial.name}</p>
-                    <p className="text-sm text-[#8BA4B4]">{testimonial.company}</p>
+
+                  <p className="text-[#636E72] text-lg leading-relaxed mb-8">
+                    &ldquo;{testimonial.content}&rdquo;
+                  </p>
+
+                  <div className="flex items-center gap-4">
+                    <div className={`w-14 h-14 bg-gradient-to-br ${testimonial.gradient} rounded-full flex items-center justify-center text-white text-xl font-display font-bold shadow-lg`}>
+                      {testimonial.name[0]}
+                    </div>
+                    <div>
+                      <p className="font-semibold text-[#2D3436]">{testimonial.name}</p>
+                      <p className="text-sm text-[#8BA4B4]">{testimonial.company}</p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
