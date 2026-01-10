@@ -28,6 +28,21 @@ export default async function AdminPage() {
             </div>
           </div>
         </Link>
+
+        <Link
+          href="/admin/wildberries"
+          className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md hover:border-purple-400 transition-all group"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-purple-800 rounded-lg flex items-center justify-center text-white text-sm font-bold">
+              WB
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900 group-hover:text-purple-600">Wildberries 대시보드</h2>
+              <p className="text-sm text-gray-500">판매 현황 및 재고 관리</p>
+            </div>
+          </div>
+        </Link>
       </div>
 
       <div className="mb-4">
