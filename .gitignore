@@ -52,6 +52,7 @@ test-*.ts
 /specs
 *.md
 !README.md
+!PENDING-TASKS.md
 
 # claude
 /.claude
