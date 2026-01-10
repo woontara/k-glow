@@ -15,6 +15,21 @@ export default async function AdminPage() {
       {/* 관리 메뉴 */}
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
         <Link
+          href="/admin/brands"
+          className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md hover:border-amber-400 transition-all group"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-amber-600 rounded-lg flex items-center justify-center text-white text-2xl">
+              🏷️
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900 group-hover:text-amber-600">브랜드 관리</h2>
+              <p className="text-sm text-gray-500">한국 브랜드 고객사 관리</p>
+            </div>
+          </div>
+        </Link>
+
+        <Link
           href="/admin/portfolio"
           className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md hover:border-[#8BA4B4] transition-all group"
         >
