@@ -30,6 +30,21 @@ export default async function AdminPage() {
         </Link>
 
         <Link
+          href="/admin/users"
+          className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md hover:border-emerald-400 transition-all group"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg flex items-center justify-center text-white text-2xl">
+              👥
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900 group-hover:text-emerald-600">사용자 관리</h2>
+              <p className="text-sm text-gray-500">사용자 계정 및 브랜드 연결</p>
+            </div>
+          </div>
+        </Link>
+
+        <Link
           href="/admin/portfolio"
           className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md hover:border-[#8BA4B4] transition-all group"
         >
