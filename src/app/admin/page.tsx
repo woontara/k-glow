@@ -45,6 +45,21 @@ export default async function AdminPage() {
         </Link>
 
         <Link
+          href="/admin/ozon"
+          className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md hover:border-blue-400 transition-all group"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-[#005BFF] to-[#0047CC] rounded-lg flex items-center justify-center text-white text-sm font-bold">
+              OZ
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900 group-hover:text-[#005BFF]">OZON 대시보드</h2>
+              <p className="text-sm text-gray-500">러시아 마켓 판매 현황</p>
+            </div>
+          </div>
+        </Link>
+
+        <Link
           href="/admin/wildberries"
           className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md hover:border-purple-400 transition-all group"
         >
