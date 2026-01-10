@@ -1,23 +1,25 @@
 import { NextResponse } from 'next/server';
 import { createCoupangClient } from '@/lib/coupang/client';
-import { auth } from '@/lib/auth';
+import { canAccessBrandDashboard } from '@/lib/get-user-brand';
+import { filterCoupangProducts, filterCoupangOrders } from '@/lib/brand-filter';
 
 export const dynamic = 'force-dynamic';
 
 /**
  * GET /api/coupang/dashboard
  * 쿠팡 대시보드 요약 데이터
+ * - 관리자: 전체 데이터
+ * - 브랜드 사용자: SKU 접두사로 필터링된 데이터
  */
 export async function GET() {
   try {
-    // 인증 확인
-    const session = await auth();
-    if (!session?.user || session.user.role !== 'ADMIN') {
-      return NextResponse.json(
-        { error: '권한이 없습니다' },
-        { status: 403 }
-      );
+    // 브랜드 권한 확인
+    const { authorized, userBrand, error } = await canAccessBrandDashboard();
+    if (!authorized || !userBrand) {
+      return NextResponse.json({ error: error || '권한이 없습니다' }, { status: 403 });
     }
+
+    const skuPrefix = userBrand.skuPrefix; // null이면 전체 데이터
 
     // API 키 확인
     const accessKey = process.env.COUPANG_ACCESS_KEY;
@@ -44,8 +46,10 @@ export async function GET() {
       return date.toISOString().slice(0, 16).replace('T', ' ');
     };
 
+    const formatDate = (date: Date) => date.toISOString().split('T')[0];
+
     // 병렬로 데이터 조회
-    const [productsResult, orders30d, orders7d] = await Promise.all([
+    const [productsResult, rawOrders30d, rawOrders7d] = await Promise.all([
       client.getProducts({ maxPerPage: 100 }).catch(() => ({ code: '', message: '', data: [], nextToken: '' })),
       client.getOrders({
         createdAtFrom: formatDateTime(thirtyDaysAgo),
@@ -59,9 +63,10 @@ export async function GET() {
       }).catch(() => ({ code: 0, message: '', data: [], nextToken: '' })),
     ]);
 
-    const products = productsResult.data || [];
-    const allOrders30d = orders30d.data || [];
-    const allOrders7d = orders7d.data || [];
+    // 브랜드 필터링 적용
+    const products = filterCoupangProducts(productsResult.data || [], skuPrefix);
+    const allOrders30d = filterCoupangOrders(rawOrders30d.data || [], skuPrefix);
+    const allOrders7d = filterCoupangOrders(rawOrders7d.data || [], skuPrefix);
 
     // 30일 매출 통계
     const revenue30d = allOrders30d.reduce((sum, order) => sum + order.totalPaymentPrice, 0);
@@ -78,7 +83,7 @@ export async function GET() {
     for (let i = 6; i >= 0; i--) {
       const date = new Date(today);
       date.setDate(date.getDate() - i);
-      const dateStr = date.toISOString().split('T')[0];
+      const dateStr = formatDate(date);
       dailyOrders[dateStr] = { date: dateStr, orders: 0, revenue: 0 };
     }
 
@@ -94,6 +99,7 @@ export async function GET() {
     const productSales: Record<number, {
       sellerProductId: number;
       sellerProductName: string;
+      externalVendorSku: string;
       count: number;
       revenue: number
     }> = {};
@@ -104,6 +110,7 @@ export async function GET() {
           productSales[item.sellerProductId] = {
             sellerProductId: item.sellerProductId,
             sellerProductName: item.sellerProductName,
+            externalVendorSku: item.externalVendorSkuCode,
             count: 0,
             revenue: 0,
           };
@@ -125,9 +132,19 @@ export async function GET() {
       totalPaymentPrice: order.totalPaymentPrice,
       receiverName: order.receiver.name,
       itemCount: order.orderItems.length,
+      items: order.orderItems.map(item => ({
+        name: item.sellerProductName,
+        sku: item.externalVendorSkuCode,
+      })),
     }));
 
     return NextResponse.json({
+      // 브랜드 정보 (UI에서 표시용)
+      brandInfo: skuPrefix ? {
+        name: userBrand.brandName,
+        skuPrefix,
+        isFiltered: true,
+      } : null,
       overview: {
         totalProducts: products.length,
         revenue30d,

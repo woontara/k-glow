@@ -1,23 +1,25 @@
 import { NextResponse } from 'next/server';
 import { createOzonClient } from '@/lib/ozon/client';
-import { auth } from '@/lib/auth';
+import { canAccessBrandDashboard } from '@/lib/get-user-brand';
+import { filterOzonProducts, filterOzonPostings, filterOzonStocks } from '@/lib/brand-filter';
 
 export const dynamic = 'force-dynamic';
 
 /**
  * GET /api/ozon/dashboard
  * OZON 대시보드 요약 데이터
+ * - 관리자: 전체 데이터
+ * - 브랜드 사용자: SKU 접두사로 필터링된 데이터
  */
 export async function GET() {
   try {
-    // 인증 확인
-    const session = await auth();
-    if (!session?.user || session.user.role !== 'ADMIN') {
-      return NextResponse.json(
-        { error: '권한이 없습니다' },
-        { status: 403 }
-      );
+    // 브랜드 권한 확인
+    const { authorized, userBrand, error } = await canAccessBrandDashboard();
+    if (!authorized || !userBrand) {
+      return NextResponse.json({ error: error || '권한이 없습니다' }, { status: 403 });
     }
+
+    const skuPrefix = userBrand.skuPrefix; // null이면 전체 데이터
 
     // API 키 확인
     const clientId = process.env.OZON_CLIENT_ID;
@@ -42,7 +44,7 @@ export async function GET() {
     const formatDate = (date: Date) => date.toISOString().split('T')[0];
 
     // 병렬로 데이터 조회
-    const [productsResult, postings30d, postings7d, stocks, transactions] = await Promise.all([
+    const [productsResult, rawPostings30d, rawPostings7d, rawStocks, transactions] = await Promise.all([
       client.getProducts({ limit: 100 }).catch(() => ({ result: { items: [], total: 0, last_id: '' } })),
       client.getPostings({
         since: thirtyDaysAgo.toISOString(),
@@ -62,10 +64,11 @@ export async function GET() {
       }).catch(() => ({ result: { operations: [], page_count: 0, row_count: 0 } })),
     ]);
 
-    const products = productsResult.result?.items || [];
-    const allPostings30d = postings30d.result?.postings || [];
-    const allPostings7d = postings7d.result?.postings || [];
-    const stockItems = stocks.result?.rows || [];
+    // 브랜드 필터링 적용
+    const products = filterOzonProducts(productsResult.result?.items || [], skuPrefix);
+    const allPostings30d = filterOzonPostings(rawPostings30d.result?.postings || [], skuPrefix);
+    const allPostings7d = filterOzonPostings(rawPostings7d.result?.postings || [], skuPrefix);
+    const stockItems = filterOzonStocks(rawStocks.result?.rows || [], skuPrefix);
     const allTransactions = transactions.result?.operations || [];
 
     // 매출 계산 (거래 내역에서)
@@ -111,6 +114,7 @@ export async function GET() {
     const productSales: Record<number, {
       sku: number;
       name: string;
+      offerId: string;
       count: number;
       revenue: number;
     }> = {};
@@ -121,6 +125,7 @@ export async function GET() {
           productSales[product.sku] = {
             sku: product.sku,
             name: product.name,
+            offerId: product.offer_id,
             count: 0,
             revenue: 0,
           };
@@ -149,13 +154,20 @@ export async function GET() {
         name: p.name,
         quantity: p.quantity,
         price: p.price,
+        offerId: p.offer_id,
       })),
       totalAmount: posting.products.reduce((sum, p) => sum + (parseFloat(p.price) * p.quantity), 0),
     }));
 
     return NextResponse.json({
+      // 브랜드 정보 (UI에서 표시용)
+      brandInfo: skuPrefix ? {
+        name: userBrand.brandName,
+        skuPrefix,
+        isFiltered: true,
+      } : null,
       overview: {
-        totalProducts: productsResult.result?.total || products.length,
+        totalProducts: products.length,
         totalStock,
         revenue30d,
         revenue7d,
@@ -172,6 +184,7 @@ export async function GET() {
       lowStockItems: lowStockItems.slice(0, 10).map(item => ({
         sku: item.sku,
         name: item.item_name,
+        itemCode: item.item_code,
         quantity: item.free_to_sell_amount,
         warehouseName: item.warehouse_name,
       })),

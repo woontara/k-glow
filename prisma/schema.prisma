@@ -22,13 +22,40 @@ model User {
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt
 
+  // 브랜드 연결 (BRAND 역할 사용자용)
+  brandId                String?
+  brand                  Brand?                  @relation(fields: [brandId], references: [id])
+
   certificationRequests  CertificationRequest[]
   quotes                 Quote[]
   accounts               Account[]
   sessions               Session[]
   uploadedProducts       UploadedProduct[]
 
+  @@index([brandId])
   @@map("users")
+}
+
+// 브랜드 (한국 브랜드 고객사 - 마켓플레이스 SKU 필터링용)
+model Brand {
+  id                     String                  @id @default(cuid())
+  name                   String                  // 브랜드명 (영문)
+  nameKo                 String                  // 브랜드명 (한글)
+  skuPrefix              String                  @unique // SKU 접두사 (예: "BRAND1", "ABC")
+  description            String?                 // 브랜드 설명
+  logoUrl                String?                 // 로고 URL
+  websiteUrl             String?                 // 웹사이트 URL
+  contactEmail           String?                 // 담당자 이메일
+  contactPhone           String?                 // 담당자 연락처
+  isActive               Boolean                 @default(true)
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+
+  users                  User[]                  // 이 브랜드에 속한 사용자들
+
+  @@index([skuPrefix])
+  @@index([isActive])
+  @@map("brands")
 }
 
 enum UserRole {
