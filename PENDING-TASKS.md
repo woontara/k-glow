@@ -28,6 +28,39 @@
 
 ---
 
+## 브랜드 고객사 설정 (API 연동 후)
+
+### 1. 상품 등록 시 SKU 규칙
+마켓플레이스에 상품 등록 시 SKU에 브랜드 접두사 사용:
+```
+{브랜드코드}-{상품코드}
+예: BRAND1-001, ABC-SKU123
+```
+
+### 2. 브랜드 등록 (관리자)
+API: `POST /api/admin/brands`
+```json
+{
+  "name": "Brand Name (영문)",
+  "nameKo": "브랜드명 (한글)",
+  "skuPrefix": "BRAND1",
+  "contactEmail": "brand@example.com"
+}
+```
+
+### 3. 브랜드 사용자 계정 생성
+1. 사용자 계정 생성 (role: BRAND)
+2. 해당 사용자에 brandId 연결
+3. 사용자가 로그인하면 자기 브랜드 데이터만 조회됨
+
+### 4. 데이터 필터링 방식
+- **관리자 (ADMIN)**: 모든 데이터 조회
+- **브랜드 사용자 (BRAND)**: SKU 접두사 매칭 데이터만 조회
+  - 상품: vendorCode/offer_id/externalVendorSku가 접두사로 시작
+  - 판매/주문: 해당 상품이 포함된 건만
+
+---
+
 ## 향후 연동 고려 대상
 
 ### Gold Apple (Золотое Яблоко)
