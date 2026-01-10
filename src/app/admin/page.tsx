@@ -30,6 +30,21 @@ export default async function AdminPage() {
         </Link>
 
         <Link
+          href="/admin/coupang"
+          className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md hover:border-red-400 transition-all group"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-[#E83F33] to-[#C62828] rounded-lg flex items-center justify-center text-white text-sm font-bold">
+              CP
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900 group-hover:text-[#E83F33]">쿠팡 대시보드</h2>
+              <p className="text-sm text-gray-500">판매 현황 및 주문 관리</p>
+            </div>
+          </div>
+        </Link>
+
+        <Link
           href="/admin/wildberries"
           className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md hover:border-purple-400 transition-all group"
         >
