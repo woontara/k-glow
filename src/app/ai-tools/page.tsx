@@ -109,23 +109,13 @@ export default function AiToolsPage() {
     }
   };
 
-  const uploadToServer = async (file: File): Promise<string> => {
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const response = await fetch('/api/upload', {
-      method: 'POST',
-      body: formData,
+  const fileToDataUrl = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
     });
-
-    if (!response.ok) {
-      throw new Error('파일 업로드 실패');
-    }
-
-    const data = await response.json();
-    // 절대 URL 반환
-    const baseUrl = window.location.origin;
-    return `${baseUrl}${data.files[0].url}`;
   };
 
   const handleProcess = async () => {
@@ -136,11 +126,11 @@ export default function AiToolsPage() {
     setResult(null);
 
     try {
-      // 1. 이미지 업로드
-      const imageUrl = await uploadToServer(imageFile);
+      // 1. 이미지를 Data URL로 변환
+      const imageDataUrl = await fileToDataUrl(imageFile);
 
       // 2. 모델별 파라미터 설정
-      let params: Record<string, unknown> = { image_url: imageUrl };
+      let params: Record<string, unknown> = { image_url: imageDataUrl };
 
       if (selectedModel.category === 'UPSCALING') {
         params.upscale_factor = upscaleFactor;
@@ -151,8 +141,8 @@ export default function AiToolsPage() {
         if (!audioFile) {
           throw new Error('비디오 생성에는 오디오 파일이 필요합니다');
         }
-        const audioUrl = await uploadToServer(audioFile);
-        params.audio_url = audioUrl;
+        const audioDataUrl = await fileToDataUrl(audioFile);
+        params.audio_url = audioDataUrl;
       }
 
       // 3. AI 모델 실행
