@@ -45,6 +45,7 @@ export default function Navigation() {
     { href: '/portfolio', label: '포트폴리오', labelEn: 'Portfolio' },
     { href: '/partners', label: '파트너사', labelEn: 'Partners' },
     { href: '/calculator', label: '견적 계산', labelEn: 'Calculator' },
+    { href: '/ai-tools', label: 'AI 도구', labelEn: 'AI Tools' },
     { href: '/forum', label: '포럼', labelEn: 'Forum' },
     { href: '/contact', label: '문의하기', labelEn: 'Contact' },
   ];

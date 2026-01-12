@@ -103,6 +103,21 @@ export default async function AdminPage() {
             </div>
           </div>
         </Link>
+
+        <Link
+          href="/admin/ai-models"
+          className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md hover:border-violet-400 transition-all group"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-violet-600 rounded-lg flex items-center justify-center text-white text-2xl">
+              🤖
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900 group-hover:text-violet-600">AI 모델 관리</h2>
+              <p className="text-sm text-gray-500">fal.ai 모델 설정 및 관리</p>
+            </div>
+          </div>
+        </Link>
       </div>
 
       <div className="mb-4">

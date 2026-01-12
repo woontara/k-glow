@@ -31,6 +31,7 @@ model User {
   accounts               Account[]
   sessions               Session[]
   uploadedProducts       UploadedProduct[]
+  aiUsageLogs            AiUsageLog[]
 
   @@index([brandId])
   @@map("users")
@@ -355,4 +356,63 @@ model VerificationToken {
 
   @@unique([identifier, token])
   @@map("verification_tokens")
+}
+
+// AI 모델 (fal.ai 연동)
+model AiModel {
+  id            String          @id @default(cuid())
+  name          String          // 모델명 (한글)
+  nameEn        String          // 모델명 (영문)
+  modelId       String          @unique // fal.ai 모델 ID (예: "fal-ai/birefnet")
+  category      AiModelCategory
+  description   String?         // 모델 설명
+  iconUrl       String?         // 아이콘 URL
+  apiKey        String?         // 모델별 API 키 (fal.ai)
+  defaultParams Json?           // 기본 파라미터 (JSON)
+  isActive      Boolean         @default(true)
+  order         Int             @default(0) // 표시 순서
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  usageLogs     AiUsageLog[]
+
+  @@index([category])
+  @@index([isActive])
+  @@map("ai_models")
+}
+
+enum AiModelCategory {
+  IMAGE_GENERATION    // 이미지 생성
+  BACKGROUND_REMOVAL  // 배경 제거
+  UPSCALING           // 업스케일링
+  VIDEO_GENERATION    // 비디오 생성
+}
+
+// AI 사용 기록
+model AiUsageLog {
+  id           String        @id @default(cuid())
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  modelId      String
+  model        AiModel       @relation(fields: [modelId], references: [id], onDelete: Cascade)
+
+  inputParams  Json          // 입력 파라미터
+  outputUrl    String?       // 결과 URL
+  status       AiUsageStatus @default(PENDING)
+  errorMessage String?       // 에러 메시지
+
+  createdAt    DateTime      @default(now())
+  completedAt  DateTime?
+
+  @@index([userId])
+  @@index([modelId])
+  @@index([status])
+  @@map("ai_usage_logs")
+}
+
+enum AiUsageStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
 }
