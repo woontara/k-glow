@@ -109,13 +109,24 @@ export default function AiToolsPage() {
     }
   };
 
-  const fileToDataUrl = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
+  // fal.ai 스토리지에 파일 업로드
+  const uploadToStorage = async (file: File, modelId: string): Promise<string> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('modelId', modelId);
+
+    const response = await fetch('/api/ai-tools/upload', {
+      method: 'POST',
+      body: formData,
     });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || '파일 업로드 실패');
+    }
+
+    const data = await response.json();
+    return data.url;
   };
 
   const handleProcess = async () => {
@@ -126,11 +137,11 @@ export default function AiToolsPage() {
     setResult(null);
 
     try {
-      // 1. 이미지를 Data URL로 변환
-      const imageDataUrl = await fileToDataUrl(imageFile);
+      // 1. 이미지를 fal.ai 스토리지에 업로드
+      const imageUrl = await uploadToStorage(imageFile, selectedModel.id);
 
       // 2. 모델별 파라미터 설정
-      let params: Record<string, unknown> = { image_url: imageDataUrl };
+      let params: Record<string, unknown> = { image_url: imageUrl };
 
       if (selectedModel.category === 'UPSCALING') {
         params.upscale_factor = upscaleFactor;
@@ -141,8 +152,8 @@ export default function AiToolsPage() {
         if (!audioFile) {
           throw new Error('비디오 생성에는 오디오 파일이 필요합니다');
         }
-        const audioDataUrl = await fileToDataUrl(audioFile);
-        params.audio_url = audioDataUrl;
+        const audioUrl = await uploadToStorage(audioFile, selectedModel.id);
+        params.audio_url = audioUrl;
       }
 
       // 3. AI 모델 실행
