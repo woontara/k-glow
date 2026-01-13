@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { WorkItemType } from '@prisma/client';
+import { fal } from '@fal-ai/client';
 
 interface WorkLibraryItem {
   id: string;
@@ -14,6 +15,8 @@ interface WorkLibraryItem {
     fileSize?: number;
     width?: number;
     height?: number;
+    mimeType?: string;
+    originalFilename?: string;
   } | null;
   createdAt: string;
 }
@@ -37,7 +40,9 @@ export default function WorkLibrarySidebar({
   const [loading, setLoading] = useState(false);
   const [activeFilter, setActiveFilter] = useState<WorkItemType | 'ALL'>('ALL');
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -104,6 +109,56 @@ export default function WorkLibrarySidebar({
     };
   };
 
+  // 파일 업로드 처리
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploading(true);
+
+    try {
+      // fal.ai API 키 가져오기
+      const keyRes = await fetch('/api/ai-tools/key?modelId=any');
+      if (keyRes.ok) {
+        const keyData = await keyRes.json();
+        if (keyData.apiKey) {
+          fal.config({ credentials: keyData.apiKey });
+        }
+      }
+
+      for (const file of Array.from(files)) {
+        // fal.ai 스토리지에 업로드
+        const url = await fal.storage.upload(file);
+
+        // 라이브러리에 저장
+        const res = await fetch('/api/work-library/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: file.name.replace(/\.[^/.]+$/, ''), // 확장자 제거
+            url,
+            mimeType: file.type,
+            fileSize: file.size,
+            filename: file.name,
+          }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          setItems((prev) => [data.item, ...prev]);
+        }
+      }
+    } catch (error) {
+      console.error('파일 업로드 실패:', error);
+      alert('파일 업로드에 실패했습니다.');
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   const filteredItems = activeFilter === 'ALL'
     ? items
     : items.filter((item) => item.type === activeFilter);
@@ -128,6 +183,42 @@ export default function WorkLibrarySidebar({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
           </svg>
         );
+      case 'TEXT':
+        return (
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+        );
+      case 'FILE':
+        return (
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+          </svg>
+        );
+      default:
+        return null;
+    }
+  };
+
+  const getTypeLabel = (type: WorkItemType) => {
+    switch (type) {
+      case 'AUDIO': return '음성';
+      case 'IMAGE': return '이미지';
+      case 'VIDEO': return '비디오';
+      case 'TEXT': return '텍스트';
+      case 'FILE': return '파일';
+      default: return type;
+    }
+  };
+
+  const getTypeColor = (type: WorkItemType) => {
+    switch (type) {
+      case 'AUDIO': return 'bg-purple-100 text-purple-600';
+      case 'IMAGE': return 'bg-blue-100 text-blue-600';
+      case 'VIDEO': return 'bg-green-100 text-green-600';
+      case 'TEXT': return 'bg-yellow-100 text-yellow-600';
+      case 'FILE': return 'bg-gray-100 text-gray-600';
+      default: return 'bg-gray-100 text-gray-600';
     }
   };
 
@@ -171,27 +262,61 @@ export default function WorkLibrarySidebar({
           </button>
         </div>
 
+        {/* 업로드 버튼 */}
+        <div className="p-4 border-b dark:border-gray-700">
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept="image/*,audio/*,video/*,.txt,.md,.json,.csv,.pdf,.doc,.docx"
+            onChange={handleFileUpload}
+            className="hidden"
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="w-full py-3 bg-gradient-to-r from-[#8BA4B4] to-[#6B8A9A] text-white font-medium rounded-lg hover:from-[#7A939C] hover:to-[#5A7989] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            {uploading ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                업로드 중...
+              </>
+            ) : (
+              <>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                파일 업로드
+              </>
+            )}
+          </button>
+          <p className="text-xs text-gray-500 text-center mt-2">
+            이미지, 오디오, 비디오, 텍스트 파일 지원
+          </p>
+        </div>
+
         {/* Filter Tabs */}
         {!filterType && (
-          <div className="flex border-b dark:border-gray-700">
-            {(['ALL', 'AUDIO', 'IMAGE', 'VIDEO'] as const).map((filter) => (
+          <div className="flex border-b dark:border-gray-700 overflow-x-auto">
+            {(['ALL', 'IMAGE', 'AUDIO', 'VIDEO', 'TEXT', 'FILE'] as const).map((filter) => (
               <button
                 key={filter}
                 onClick={() => setActiveFilter(filter)}
-                className={`flex-1 py-2 text-sm font-medium transition-colors ${
+                className={`flex-1 py-2 text-xs font-medium transition-colors whitespace-nowrap px-2 ${
                   activeFilter === filter
                     ? 'text-[#8BA4B4] border-b-2 border-[#8BA4B4]'
                     : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
                 }`}
               >
-                {filter === 'ALL' ? '전체' : filter === 'AUDIO' ? '음성' : filter === 'IMAGE' ? '이미지' : '비디오'}
+                {filter === 'ALL' ? '전체' : getTypeLabel(filter)}
               </button>
             ))}
           </div>
         )}
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4" style={{ maxHeight: 'calc(100vh - 120px)' }}>
+        <div className="flex-1 overflow-y-auto p-4" style={{ maxHeight: 'calc(100vh - 220px)' }}>
           {loading ? (
             <div className="flex items-center justify-center h-32">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#8BA4B4]" />
@@ -202,7 +327,7 @@ export default function WorkLibrarySidebar({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
               </svg>
               <p className="text-sm">저장된 작업물이 없습니다</p>
-              <p className="text-xs mt-1 text-gray-400">AI 도구에서 결과물을 저장해보세요</p>
+              <p className="text-xs mt-1 text-gray-400">파일을 업로드하거나 AI 결과물을 저장해보세요</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -234,12 +359,8 @@ export default function WorkLibrarySidebar({
                         {item.name}
                       </p>
                       <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
-                        <span className={`px-1.5 py-0.5 rounded ${
-                          item.type === 'AUDIO' ? 'bg-purple-100 text-purple-600' :
-                          item.type === 'IMAGE' ? 'bg-blue-100 text-blue-600' :
-                          'bg-green-100 text-green-600'
-                        }`}>
-                          {item.type === 'AUDIO' ? '음성' : item.type === 'IMAGE' ? '이미지' : '비디오'}
+                        <span className={`px-1.5 py-0.5 rounded ${getTypeColor(item.type)}`}>
+                          {getTypeLabel(item.type)}
                         </span>
                         {item.metadata?.duration && (
                           <span>{formatDuration(item.metadata.duration)}</span>

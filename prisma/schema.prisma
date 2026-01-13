@@ -445,4 +445,6 @@ enum WorkItemType {
   AUDIO
   IMAGE
   VIDEO
+  TEXT
+  FILE
 }
