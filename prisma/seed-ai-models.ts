@@ -45,6 +45,22 @@ const aiModels = [
     isActive: true,
     order: 3,
   },
+  {
+    name: '텍스트 음성 변환',
+    nameEn: 'Text to Speech',
+    modelId: 'fal-ai/minimax-tts/text-to-speech',
+    category: 'TEXT_TO_SPEECH' as const,
+    description: '텍스트를 자연스러운 음성으로 변환합니다. 한국어를 포함한 30개 이상의 언어를 지원하며, 다양한 목소리와 감정 표현이 가능합니다.',
+    defaultParams: {
+      voice_id: 'Wise_Woman',
+      emotion: 'neutral',
+      speed: 1.0,
+      format: 'mp3',
+      sample_rate: 32000,
+    },
+    isActive: true,
+    order: 4,
+  },
 ];
 
 async function main() {

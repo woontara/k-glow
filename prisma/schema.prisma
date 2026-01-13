@@ -386,6 +386,7 @@ enum AiModelCategory {
   BACKGROUND_REMOVAL  // 배경 제거
   UPSCALING           // 업스케일링
   VIDEO_GENERATION    // 비디오 생성
+  TEXT_TO_SPEECH      // 텍스트 음성 변환
 }
 
 // AI 사용 기록

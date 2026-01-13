@@ -68,12 +68,15 @@ export async function POST(
     });
 
     // 6. fal.ai API 호출 (모델별 API 키 사용)
-    const result = await runAiModel(aiModel.modelId, inputParams, apiKey);
+    const rawResult = await runAiModel(aiModel.modelId, inputParams, apiKey);
 
-    // 7. 결과에서 출력 URL 추출
+    // 7. 결과 정규화 (일관된 형식으로 변환)
+    const result = normalizeResult(rawResult);
+
+    // 8. 결과에서 출력 URL 추출
     const outputUrl = extractOutputUrl(result);
 
-    // 8. 사용 로그 업데이트 (완료)
+    // 9. 사용 로그 업데이트 (완료)
     await prisma.aiUsageLog.update({
       where: { id: usageLog.id },
       data: {
@@ -103,6 +106,28 @@ export async function POST(
 }
 
 /**
+ * 결과 데이터를 일관된 형식으로 정규화
+ */
+function normalizeResult(data: unknown): Record<string, unknown> {
+  if (!data || typeof data !== 'object') return {};
+
+  const result = data as Record<string, unknown>;
+  const normalized: Record<string, unknown> = { ...result };
+
+  // MiniMax TTS는 audio_file로 반환하므로 audio로 변환
+  if (result.audio_file && typeof result.audio_file === 'object') {
+    normalized.audio = result.audio_file;
+  }
+
+  // 직접 audio_url이 있는 경우
+  if (typeof result.audio_url === 'string') {
+    normalized.audio = { url: result.audio_url };
+  }
+
+  return normalized;
+}
+
+/**
  * 결과 데이터에서 출력 URL 추출
  */
 function extractOutputUrl(data: unknown): string | null {
@@ -122,8 +147,23 @@ function extractOutputUrl(data: unknown): string | null {
     if (typeof video.url === 'string') return video.url;
   }
 
+  // 오디오 결과 (TTS)
+  if (result.audio && typeof result.audio === 'object') {
+    const audio = result.audio as Record<string, unknown>;
+    if (typeof audio.url === 'string') return audio.url;
+  }
+
+  // MiniMax TTS는 audio_file로 반환
+  if (result.audio_file && typeof result.audio_file === 'object') {
+    const audioFile = result.audio_file as Record<string, unknown>;
+    if (typeof audioFile.url === 'string') return audioFile.url;
+  }
+
   // 직접 URL
   if (typeof result.url === 'string') return result.url;
+
+  // 직접 audio_url (일부 TTS 모델)
+  if (typeof result.audio_url === 'string') return result.audio_url;
 
   return null;
 }

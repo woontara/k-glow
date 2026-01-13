@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { fal } from '@fal-ai/client';
 
-type AiModelCategory = 'IMAGE_GENERATION' | 'BACKGROUND_REMOVAL' | 'UPSCALING' | 'VIDEO_GENERATION';
+type AiModelCategory = 'IMAGE_GENERATION' | 'BACKGROUND_REMOVAL' | 'UPSCALING' | 'VIDEO_GENERATION' | 'TEXT_TO_SPEECH';
 
 interface AiModel {
   id: string;
@@ -21,6 +21,7 @@ interface AiModel {
 interface ProcessingResult {
   image?: { url: string };
   video?: { url: string };
+  audio?: { url: string };
 }
 
 const categoryConfig: Record<AiModelCategory, { icon: string; gradient: string; border: string }> = {
@@ -44,6 +45,11 @@ const categoryConfig: Record<AiModelCategory, { icon: string; gradient: string; 
     gradient: 'from-orange-500 to-red-500',
     border: 'hover:border-orange-400'
   },
+  TEXT_TO_SPEECH: {
+    icon: '🎙️',
+    gradient: 'from-pink-500 to-rose-500',
+    border: 'hover:border-pink-400'
+  },
 };
 
 export default function AiToolsPage() {
@@ -65,6 +71,12 @@ export default function AiToolsPage() {
   // 배경 제거 설정
   const [bgRemovalModel, setBgRemovalModel] = useState('General Use (Light)');
   const [outputFormat, setOutputFormat] = useState('png');
+
+  // TTS 설정
+  const [ttsText, setTtsText] = useState('');
+  const [ttsVoice, setTtsVoice] = useState('Wise_Woman');
+  const [ttsEmotion, setTtsEmotion] = useState('neutral');
+  const [ttsSpeed, setTtsSpeed] = useState(1.0);
 
   const fetchModels = useCallback(async () => {
     try {
@@ -128,33 +140,47 @@ export default function AiToolsPage() {
   };
 
   const handleProcess = async () => {
-    if (!selectedModel || !imageFile) return;
+    if (!selectedModel) return;
+
+    // TTS는 텍스트만 필요, 다른 도구는 이미지 필요
+    if (selectedModel.category !== 'TEXT_TO_SPEECH' && !imageFile) return;
+    if (selectedModel.category === 'TEXT_TO_SPEECH' && !ttsText.trim()) return;
 
     setProcessing(true);
     setError(null);
     setResult(null);
 
     try {
-      // 1. 이미지를 fal.ai 스토리지에 업로드
-      const imageUrl = await uploadToStorage(imageFile, selectedModel.id);
+      let params: Record<string, unknown> = {};
 
-      // 2. 모델별 파라미터 설정
-      let params: Record<string, unknown> = { image_url: imageUrl };
+      if (selectedModel.category === 'TEXT_TO_SPEECH') {
+        // TTS 파라미터
+        params = {
+          text: ttsText,
+          voice_id: ttsVoice,
+          emotion: ttsEmotion,
+          speed: ttsSpeed,
+        };
+      } else {
+        // 이미지 기반 도구
+        const imageUrl = await uploadToStorage(imageFile!, selectedModel.id);
+        params = { image_url: imageUrl };
 
-      if (selectedModel.category === 'UPSCALING') {
-        params.upscale_factor = upscaleFactor;
-      } else if (selectedModel.category === 'BACKGROUND_REMOVAL') {
-        params.model = bgRemovalModel;
-        params.output_format = outputFormat;
-      } else if (selectedModel.category === 'VIDEO_GENERATION') {
-        if (!audioFile) {
-          throw new Error('비디오 생성에는 오디오 파일이 필요합니다');
+        if (selectedModel.category === 'UPSCALING') {
+          params.upscale_factor = upscaleFactor;
+        } else if (selectedModel.category === 'BACKGROUND_REMOVAL') {
+          params.model = bgRemovalModel;
+          params.output_format = outputFormat;
+        } else if (selectedModel.category === 'VIDEO_GENERATION') {
+          if (!audioFile) {
+            throw new Error('비디오 생성에는 오디오 파일이 필요합니다');
+          }
+          const audioUrl = await uploadToStorage(audioFile, selectedModel.id);
+          params.audio_url = audioUrl;
         }
-        const audioUrl = await uploadToStorage(audioFile, selectedModel.id);
-        params.audio_url = audioUrl;
       }
 
-      // 3. AI 모델 실행
+      // AI 모델 실행
       const response = await fetch(`/api/ai-tools/${selectedModel.id}/run`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -176,7 +202,7 @@ export default function AiToolsPage() {
   };
 
   const handleDownload = async () => {
-    const url = result?.image?.url || result?.video?.url;
+    const url = result?.image?.url || result?.video?.url || result?.audio?.url;
     if (!url) return;
 
     try {
@@ -185,7 +211,7 @@ export default function AiToolsPage() {
       const downloadUrl = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = downloadUrl;
-      a.download = result?.video ? 'ai-video.mp4' : 'ai-result.png';
+      a.download = result?.video ? 'ai-video.mp4' : result?.audio ? 'ai-audio.mp3' : 'ai-result.png';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -201,6 +227,7 @@ export default function AiToolsPage() {
     setAudioFile(null);
     setResult(null);
     setError(null);
+    setTtsText('');
   };
 
   if (status === 'loading' || loading) {
@@ -217,10 +244,10 @@ export default function AiToolsPage() {
         {/* 헤더 */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            AI 이미지 도구
+            AI 도구
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            한국 브랜드를 위한 AI 이미지 편집 도구입니다. 배경 제거, 이미지 업스케일링 등 다양한 기능을 사용해보세요.
+            한국 브랜드를 위한 AI 도구입니다. 배경 제거, 이미지 업스케일링, 음성 생성 등 다양한 기능을 사용해보세요.
           </p>
         </div>
 
@@ -294,49 +321,127 @@ export default function AiToolsPage() {
               <div className="grid lg:grid-cols-2 gap-8">
                 {/* 입력 영역 */}
                 <div className="space-y-6">
-                  {/* 이미지 업로드 */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      이미지 업로드
-                    </label>
-                    <div
-                      className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
-                        imagePreview ? 'border-[#8BA4B4] bg-[#8BA4B4]/5' : 'border-gray-300 hover:border-[#8BA4B4]'
-                      }`}
-                    >
-                      {imagePreview ? (
-                        <div className="space-y-4">
-                          <img
-                            src={imagePreview}
-                            alt="Preview"
-                            className="max-h-64 mx-auto rounded-lg shadow-md"
-                          />
-                          <button
-                            onClick={() => {
-                              setImageFile(null);
-                              setImagePreview(null);
-                              setResult(null);
-                            }}
-                            className="text-sm text-red-500 hover:text-red-600"
-                          >
-                            이미지 제거
-                          </button>
-                        </div>
-                      ) : (
-                        <label className="cursor-pointer block">
-                          <div className="text-4xl mb-3">📤</div>
-                          <p className="text-gray-600 mb-2">클릭하여 이미지를 업로드하거나</p>
-                          <p className="text-gray-400 text-sm">드래그 앤 드롭</p>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handleImageChange}
-                            className="hidden"
-                          />
+                  {/* TTS 텍스트 입력 */}
+                  {selectedModel.category === 'TEXT_TO_SPEECH' ? (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          텍스트 입력
                         </label>
-                      )}
+                        <textarea
+                          value={ttsText}
+                          onChange={(e) => setTtsText(e.target.value)}
+                          placeholder="음성으로 변환할 텍스트를 입력하세요. (최대 5,000자)"
+                          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#8BA4B4] focus:border-transparent resize-none"
+                          rows={6}
+                          maxLength={5000}
+                        />
+                        <p className="text-sm text-gray-400 mt-1 text-right">
+                          {ttsText.length} / 5,000자
+                        </p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            음성
+                          </label>
+                          <select
+                            value={ttsVoice}
+                            onChange={(e) => setTtsVoice(e.target.value)}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8BA4B4] focus:border-transparent"
+                          >
+                            <option value="Wise_Woman">현명한 여성</option>
+                            <option value="Friendly_Person">친근한 목소리</option>
+                            <option value="Inspirational_girl">영감적인 소녀</option>
+                            <option value="Deep_Voice_Man">깊은 남성 목소리</option>
+                            <option value="Calm_Woman">차분한 여성</option>
+                            <option value="Newsman">뉴스 앵커</option>
+                            <option value="Cartoon_Man">만화 남성</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            감정
+                          </label>
+                          <select
+                            value={ttsEmotion}
+                            onChange={(e) => setTtsEmotion(e.target.value)}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8BA4B4] focus:border-transparent"
+                          >
+                            <option value="neutral">중립</option>
+                            <option value="happy">기쁨</option>
+                            <option value="sad">슬픔</option>
+                            <option value="angry">분노</option>
+                            <option value="fearful">두려움</option>
+                            <option value="surprised">놀람</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          속도: {ttsSpeed.toFixed(1)}x
+                        </label>
+                        <input
+                          type="range"
+                          min="0.5"
+                          max="2"
+                          step="0.1"
+                          value={ttsSpeed}
+                          onChange={(e) => setTtsSpeed(parseFloat(e.target.value))}
+                          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#8BA4B4]"
+                        />
+                        <div className="flex justify-between text-xs text-gray-400 mt-1">
+                          <span>느리게</span>
+                          <span>보통</span>
+                          <span>빠르게</span>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    /* 이미지 업로드 */
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        이미지 업로드
+                      </label>
+                      <div
+                        className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
+                          imagePreview ? 'border-[#8BA4B4] bg-[#8BA4B4]/5' : 'border-gray-300 hover:border-[#8BA4B4]'
+                        }`}
+                      >
+                        {imagePreview ? (
+                          <div className="space-y-4">
+                            <img
+                              src={imagePreview}
+                              alt="Preview"
+                              className="max-h-64 mx-auto rounded-lg shadow-md"
+                            />
+                            <button
+                              onClick={() => {
+                                setImageFile(null);
+                                setImagePreview(null);
+                                setResult(null);
+                              }}
+                              className="text-sm text-red-500 hover:text-red-600"
+                            >
+                              이미지 제거
+                            </button>
+                          </div>
+                        ) : (
+                          <label className="cursor-pointer block">
+                            <div className="text-4xl mb-3">📤</div>
+                            <p className="text-gray-600 mb-2">클릭하여 이미지를 업로드하거나</p>
+                            <p className="text-gray-400 text-sm">드래그 앤 드롭</p>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleImageChange}
+                              className="hidden"
+                            />
+                          </label>
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* 비디오 생성 시 오디오 업로드 */}
                   {selectedModel.category === 'VIDEO_GENERATION' && (
@@ -445,7 +550,12 @@ export default function AiToolsPage() {
                   {/* 실행 버튼 */}
                   <button
                     onClick={handleProcess}
-                    disabled={!imageFile || processing || (selectedModel.category === 'VIDEO_GENERATION' && !audioFile)}
+                    disabled={
+                      processing ||
+                      (selectedModel.category === 'TEXT_TO_SPEECH' && !ttsText.trim()) ||
+                      (selectedModel.category !== 'TEXT_TO_SPEECH' && !imageFile) ||
+                      (selectedModel.category === 'VIDEO_GENERATION' && !audioFile)
+                    }
                     className="w-full py-4 bg-gradient-to-r from-[#8BA4B4] to-[#6B8A9A] text-white font-semibold rounded-xl hover:from-[#7A939C] hover:to-[#5A7989] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl"
                   >
                     {processing ? (
@@ -495,6 +605,27 @@ export default function AiToolsPage() {
                           controls
                           className="max-h-80 mx-auto rounded-lg shadow-lg"
                         />
+                        <button
+                          onClick={handleDownload}
+                          className="w-full py-3 bg-green-500 text-white font-medium rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center gap-2"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                          </svg>
+                          다운로드
+                        </button>
+                      </div>
+                    ) : result?.audio?.url ? (
+                      <div className="space-y-4 w-full">
+                        <div className="bg-gradient-to-br from-pink-100 to-rose-100 rounded-xl p-8 text-center">
+                          <div className="text-6xl mb-4">🎙️</div>
+                          <p className="text-gray-600 mb-4">음성이 생성되었습니다</p>
+                          <audio
+                            src={result.audio.url}
+                            controls
+                            className="w-full"
+                          />
+                        </div>
                         <button
                           onClick={handleDownload}
                           className="w-full py-3 bg-green-500 text-white font-medium rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center gap-2"

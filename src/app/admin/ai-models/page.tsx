@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
-type AiModelCategory = 'IMAGE_GENERATION' | 'BACKGROUND_REMOVAL' | 'UPSCALING' | 'VIDEO_GENERATION';
+type AiModelCategory = 'IMAGE_GENERATION' | 'BACKGROUND_REMOVAL' | 'UPSCALING' | 'VIDEO_GENERATION' | 'TEXT_TO_SPEECH';
 
 interface AiModel {
   id: string;
@@ -54,6 +54,7 @@ const categoryLabels: Record<AiModelCategory, { label: string; icon: string; col
   BACKGROUND_REMOVAL: { label: '배경 제거', icon: '✂️', color: 'bg-blue-100 text-blue-700' },
   UPSCALING: { label: '업스케일링', icon: '🔍', color: 'bg-green-100 text-green-700' },
   VIDEO_GENERATION: { label: '비디오 생성', icon: '🎬', color: 'bg-orange-100 text-orange-700' },
+  TEXT_TO_SPEECH: { label: '음성 변환', icon: '🎙️', color: 'bg-pink-100 text-pink-700' },
 };
 
 const presetModels = [
@@ -91,6 +92,19 @@ const presetModels = [
     defaultParams: {
       resolution: '720p',
       guidance_scale: 1,
+    },
+  },
+  {
+    name: '텍스트 음성 변환',
+    nameEn: 'Text to Speech',
+    modelId: 'fal-ai/minimax-tts/text-to-speech',
+    category: 'TEXT_TO_SPEECH' as AiModelCategory,
+    description: '텍스트를 자연스러운 음성으로 변환합니다. 한국어 포함 30개 이상 언어 지원.',
+    defaultParams: {
+      voice_id: 'Wise_Woman',
+      emotion: 'neutral',
+      speed: 1.0,
+      format: 'mp3',
     },
   },
 ];
