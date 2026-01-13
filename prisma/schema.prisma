@@ -32,6 +32,7 @@ model User {
   sessions               Session[]
   uploadedProducts       UploadedProduct[]
   aiUsageLogs            AiUsageLog[]
+  workLibraryItems       WorkLibraryItem[]
 
   @@index([brandId])
   @@map("users")
@@ -416,4 +417,32 @@ enum AiUsageStatus {
   PROCESSING
   COMPLETED
   FAILED
+}
+
+// 작업물 라이브러리 (사용자가 저장한 AI 생성물)
+model WorkLibraryItem {
+  id          String       @id @default(cuid())
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name        String       // 사용자가 지정한 이름
+  type        WorkItemType // AUDIO, IMAGE, VIDEO
+  url         String       // 파일 URL
+  thumbnail   String?      // 썸네일 URL (이미지/비디오용)
+  metadata    Json?        // 추가 정보 (duration, fileSize 등)
+
+  sourceLogId String?      // 원본 AiUsageLog 참조 (선택)
+
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([userId])
+  @@index([type])
+  @@map("work_library_items")
+}
+
+enum WorkItemType {
+  AUDIO
+  IMAGE
+  VIDEO
 }

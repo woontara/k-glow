@@ -4,6 +4,21 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { fal } from '@fal-ai/client';
+import WorkLibrarySidebar from '@/components/ai-tools/WorkLibrarySidebar';
+import { WorkItemType } from '@prisma/client';
+
+interface LibraryItem {
+  id: string;
+  name: string;
+  type: WorkItemType;
+  url: string;
+  thumbnail?: string | null;
+  metadata?: {
+    duration?: number;
+    fileSize?: number;
+  } | null;
+  createdAt: string;
+}
 
 type AiModelCategory = 'IMAGE_GENERATION' | 'BACKGROUND_REMOVAL' | 'UPSCALING' | 'VIDEO_GENERATION' | 'TEXT_TO_SPEECH';
 
@@ -84,6 +99,12 @@ export default function AiToolsPage() {
   const [ttsSpeed, setTtsSpeed] = useState(1.0);
   const [sampleLoading, setSampleLoading] = useState(false);
   const [sampleAudio, setSampleAudio] = useState<HTMLAudioElement | null>(null);
+
+  // 라이브러리 사이드바
+  const [librarySidebarOpen, setLibrarySidebarOpen] = useState(false);
+  const [libraryFilterType, setLibraryFilterType] = useState<WorkItemType | undefined>(undefined);
+  const [selectedLibraryAudio, setSelectedLibraryAudio] = useState<LibraryItem | null>(null);
+  const [savingToLibrary, setSavingToLibrary] = useState(false);
 
   const fetchModels = useCallback(async () => {
     try {
@@ -169,6 +190,69 @@ export default function AiToolsPage() {
     setSampleAudio(audio);
   };
 
+  // 라이브러리에 저장
+  const saveToLibrary = async (name: string) => {
+    if (!result || !selectedModel) return;
+
+    const url = result.image?.url || result.video?.url || result.audio?.url;
+    if (!url) return;
+
+    setSavingToLibrary(true);
+    try {
+      let type: WorkItemType;
+      let metadata: Record<string, unknown> | undefined;
+
+      if (result.audio?.url) {
+        type = 'AUDIO';
+        metadata = {
+          duration: result.duration_ms,
+          fileSize: result.audio.file_size,
+        };
+      } else if (result.video?.url) {
+        type = 'VIDEO';
+      } else {
+        type = 'IMAGE';
+      }
+
+      const res = await fetch('/api/work-library', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          type,
+          url,
+          metadata,
+        }),
+      });
+
+      if (res.ok) {
+        alert('라이브러리에 저장되었습니다.');
+      } else {
+        throw new Error('저장 실패');
+      }
+    } catch (err) {
+      console.error('라이브러리 저장 실패:', err);
+      alert('저장에 실패했습니다.');
+    } finally {
+      setSavingToLibrary(false);
+    }
+  };
+
+  // 라이브러리에서 오디오 선택
+  const handleLibrarySelect = (item: LibraryItem) => {
+    if (item.type === 'AUDIO') {
+      setSelectedLibraryAudio(item);
+      setAudioFile(null); // 파일 업로드 초기화
+    }
+    setLibrarySidebarOpen(false);
+  };
+
+  // 라이브러리 열기 (오디오 선택용)
+  const openLibraryForAudio = () => {
+    setLibraryFilterType('AUDIO');
+    setLibrarySidebarOpen(true);
+  };
+
   const handleProcess = async () => {
     if (!selectedModel) return;
 
@@ -202,11 +286,15 @@ export default function AiToolsPage() {
           params.model = bgRemovalModel;
           params.output_format = outputFormat;
         } else if (selectedModel.category === 'VIDEO_GENERATION') {
-          if (!audioFile) {
+          // 라이브러리에서 선택한 오디오 또는 업로드한 파일 사용
+          if (selectedLibraryAudio) {
+            params.audio_url = selectedLibraryAudio.url;
+          } else if (audioFile) {
+            const audioUrl = await uploadToStorage(audioFile, selectedModel.id);
+            params.audio_url = audioUrl;
+          } else {
             throw new Error('비디오 생성에는 오디오 파일이 필요합니다');
           }
-          const audioUrl = await uploadToStorage(audioFile, selectedModel.id);
-          params.audio_url = audioUrl;
         }
       }
 
@@ -258,6 +346,7 @@ export default function AiToolsPage() {
     setResult(null);
     setError(null);
     setTtsText('');
+    setSelectedLibraryAudio(null);
     // 샘플 오디오 정지
     if (sampleAudio) {
       sampleAudio.pause();
@@ -277,13 +366,26 @@ export default function AiToolsPage() {
     <div className="min-h-screen bg-gradient-to-br from-[#f8f9fa] via-white to-[#f0f4f8] py-12 px-4">
       <div className="max-w-6xl mx-auto">
         {/* 헤더 */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-12 relative">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
             AI 도구
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
             한국 브랜드를 위한 AI 도구입니다. 배경 제거, 이미지 업스케일링, 음성 생성 등 다양한 기능을 사용해보세요.
           </p>
+          {/* 라이브러리 버튼 */}
+          <button
+            onClick={() => {
+              setLibraryFilterType(undefined);
+              setLibrarySidebarOpen(true);
+            }}
+            className="absolute right-0 top-0 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2 text-gray-700 shadow-sm"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+            </svg>
+            라이브러리
+          </button>
         </div>
 
         {/* 모델 선택 */}
@@ -519,42 +621,85 @@ export default function AiToolsPage() {
                     </div>
                   )}
 
-                  {/* 비디오 생성 시 오디오 업로드 */}
+                  {/* 비디오 생성 시 오디오 선택 */}
                   {selectedModel.category === 'VIDEO_GENERATION' && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        오디오 업로드
+                        오디오 선택
                       </label>
-                      <div className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center hover:border-[#8BA4B4] transition-colors">
-                        <label className="cursor-pointer block">
-                          {audioFile ? (
-                            <div className="flex items-center justify-center gap-2">
+
+                      {/* 선택된 오디오 표시 */}
+                      {selectedLibraryAudio ? (
+                        <div className="border-2 border-[#8BA4B4] bg-[#8BA4B4]/5 rounded-xl p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                                <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                                </svg>
+                              </div>
+                              <div>
+                                <p className="font-medium text-gray-900">{selectedLibraryAudio.name}</p>
+                                <p className="text-xs text-gray-500">라이브러리에서 선택됨</p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => setSelectedLibraryAudio(null)}
+                              className="text-gray-400 hover:text-red-500"
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                      ) : audioFile ? (
+                        <div className="border-2 border-[#8BA4B4] bg-[#8BA4B4]/5 rounded-xl p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
                               <span className="text-2xl">🎵</span>
                               <span className="text-gray-700">{audioFile.name}</span>
-                              <button
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  setAudioFile(null);
-                                }}
-                                className="text-red-500 hover:text-red-600"
-                              >
-                                ✕
-                              </button>
                             </div>
-                          ) : (
-                            <>
-                              <div className="text-3xl mb-2">🎵</div>
-                              <p className="text-gray-600 text-sm">오디오 파일 선택</p>
-                            </>
-                          )}
-                          <input
-                            type="file"
-                            accept="audio/*"
-                            onChange={handleAudioChange}
-                            className="hidden"
-                          />
-                        </label>
-                      </div>
+                            <button
+                              onClick={() => setAudioFile(null)}
+                              className="text-gray-400 hover:text-red-500"
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-2 gap-3">
+                          {/* 라이브러리에서 선택 */}
+                          <button
+                            onClick={openLibraryForAudio}
+                            className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center hover:border-[#8BA4B4] hover:bg-[#8BA4B4]/5 transition-colors"
+                          >
+                            <svg className="w-8 h-8 mx-auto mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                            </svg>
+                            <p className="text-sm text-gray-600">라이브러리에서 선택</p>
+                            <p className="text-xs text-gray-400 mt-1">저장된 TTS 음성 불러오기</p>
+                          </button>
+
+                          {/* 파일 업로드 */}
+                          <label className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center hover:border-[#8BA4B4] hover:bg-[#8BA4B4]/5 transition-colors cursor-pointer">
+                            <svg className="w-8 h-8 mx-auto mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                            </svg>
+                            <p className="text-sm text-gray-600">파일 업로드</p>
+                            <p className="text-xs text-gray-400 mt-1">새 오디오 파일 선택</p>
+                            <input
+                              type="file"
+                              accept="audio/*"
+                              onChange={handleAudioChange}
+                              className="hidden"
+                            />
+                          </label>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -630,7 +775,7 @@ export default function AiToolsPage() {
                       processing ||
                       (selectedModel.category === 'TEXT_TO_SPEECH' && !ttsText.trim()) ||
                       (selectedModel.category !== 'TEXT_TO_SPEECH' && !imageFile) ||
-                      (selectedModel.category === 'VIDEO_GENERATION' && !audioFile)
+                      (selectedModel.category === 'VIDEO_GENERATION' && !audioFile && !selectedLibraryAudio)
                     }
                     className="w-full py-4 bg-gradient-to-r from-[#8BA4B4] to-[#6B8A9A] text-white font-semibold rounded-xl hover:from-[#7A939C] hover:to-[#5A7989] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl"
                   >
@@ -664,15 +809,30 @@ export default function AiToolsPage() {
                           alt="Result"
                           className="max-h-80 mx-auto rounded-lg shadow-lg"
                         />
-                        <button
-                          onClick={handleDownload}
-                          className="w-full py-3 bg-green-500 text-white font-medium rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center gap-2"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                          </svg>
-                          다운로드
-                        </button>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            onClick={handleDownload}
+                            className="py-3 bg-green-500 text-white font-medium rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center gap-2"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            다운로드
+                          </button>
+                          <button
+                            onClick={() => {
+                              const name = prompt('저장할 이름을 입력하세요:', selectedModel?.name + ' 결과');
+                              if (name) saveToLibrary(name);
+                            }}
+                            disabled={savingToLibrary}
+                            className="py-3 bg-[#8BA4B4] text-white font-medium rounded-lg hover:bg-[#7A939C] transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                            </svg>
+                            {savingToLibrary ? '저장 중...' : '라이브러리 저장'}
+                          </button>
+                        </div>
                       </div>
                     ) : result?.video?.url ? (
                       <div className="space-y-4 w-full">
@@ -681,15 +841,30 @@ export default function AiToolsPage() {
                           controls
                           className="max-h-80 mx-auto rounded-lg shadow-lg"
                         />
-                        <button
-                          onClick={handleDownload}
-                          className="w-full py-3 bg-green-500 text-white font-medium rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center gap-2"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                          </svg>
-                          다운로드
-                        </button>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            onClick={handleDownload}
+                            className="py-3 bg-green-500 text-white font-medium rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center gap-2"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            다운로드
+                          </button>
+                          <button
+                            onClick={() => {
+                              const name = prompt('저장할 이름을 입력하세요:', 'AI 비디오');
+                              if (name) saveToLibrary(name);
+                            }}
+                            disabled={savingToLibrary}
+                            className="py-3 bg-[#8BA4B4] text-white font-medium rounded-lg hover:bg-[#7A939C] transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                            </svg>
+                            {savingToLibrary ? '저장 중...' : '라이브러리 저장'}
+                          </button>
+                        </div>
                       </div>
                     ) : result?.audio?.url ? (
                       <div className="space-y-4 w-full">
@@ -721,15 +896,30 @@ export default function AiToolsPage() {
                             className="w-full"
                           />
                         </div>
-                        <button
-                          onClick={handleDownload}
-                          className="w-full py-3 bg-green-500 text-white font-medium rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center gap-2"
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                          </svg>
-                          MP3 다운로드
-                        </button>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            onClick={handleDownload}
+                            className="py-3 bg-green-500 text-white font-medium rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center gap-2"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            MP3 다운로드
+                          </button>
+                          <button
+                            onClick={() => {
+                              const name = prompt('저장할 이름을 입력하세요:', 'TTS 음성');
+                              if (name) saveToLibrary(name);
+                            }}
+                            disabled={savingToLibrary}
+                            className="py-3 bg-[#8BA4B4] text-white font-medium rounded-lg hover:bg-[#7A939C] transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                            </svg>
+                            {savingToLibrary ? '저장 중...' : '라이브러리 저장'}
+                          </button>
+                        </div>
                       </div>
                     ) : (
                       <div className="text-center text-gray-400">
@@ -743,6 +933,15 @@ export default function AiToolsPage() {
             </div>
           </div>
         )}
+
+        {/* 라이브러리 사이드바 */}
+        <WorkLibrarySidebar
+          isOpen={librarySidebarOpen}
+          onClose={() => setLibrarySidebarOpen(false)}
+          onSelect={handleLibrarySelect}
+          filterType={libraryFilterType}
+          selectedItemId={selectedLibraryAudio?.id}
+        />
       </div>
     </div>
   );
