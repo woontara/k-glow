@@ -41,6 +41,7 @@ export default function WorkLibrarySidebar({
   const [activeFilter, setActiveFilter] = useState<WorkItemType | 'ALL'>('ALL');
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -109,10 +110,9 @@ export default function WorkLibrarySidebar({
     };
   };
 
-  // 파일 업로드 처리
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+  // 파일 업로드 처리 (공통 함수)
+  const uploadFiles = async (files: File[]) => {
+    if (files.length === 0) return;
 
     setUploading(true);
 
@@ -126,7 +126,7 @@ export default function WorkLibrarySidebar({
         }
       }
 
-      for (const file of Array.from(files)) {
+      for (const file of files) {
         // fal.ai 스토리지에 업로드
         const url = await fal.storage.upload(file);
 
@@ -156,6 +156,37 @@ export default function WorkLibrarySidebar({
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
+    }
+  };
+
+  // input 파일 선택 핸들러
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    await uploadFiles(Array.from(files));
+  };
+
+  // 드래그앤드롭 핸들러
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) {
+      await uploadFiles(files);
     }
   };
 
@@ -262,8 +293,15 @@ export default function WorkLibrarySidebar({
           </button>
         </div>
 
-        {/* 업로드 버튼 */}
-        <div className="p-4 border-b dark:border-gray-700">
+        {/* 업로드 영역 (드래그앤드롭 지원) */}
+        <div
+          className={`p-4 border-b dark:border-gray-700 transition-colors ${
+            isDragging ? 'bg-[#8BA4B4]/20' : ''
+          }`}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
           <input
             ref={fileInputRef}
             type="file"
@@ -272,28 +310,36 @@ export default function WorkLibrarySidebar({
             onChange={handleFileUpload}
             className="hidden"
           />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-            className="w-full py-3 bg-gradient-to-r from-[#8BA4B4] to-[#6B8A9A] text-white font-medium rounded-lg hover:from-[#7A939C] hover:to-[#5A7989] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+          <div
+            onClick={() => !uploading && fileInputRef.current?.click()}
+            className={`w-full py-4 border-2 border-dashed rounded-lg cursor-pointer transition-all flex flex-col items-center justify-center gap-2 ${
+              isDragging
+                ? 'border-[#8BA4B4] bg-[#8BA4B4]/10'
+                : 'border-gray-300 hover:border-[#8BA4B4] hover:bg-gray-50'
+            } ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             {uploading ? (
               <>
-                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-                업로드 중...
+                <div className="animate-spin rounded-full h-6 w-6 border-2 border-[#8BA4B4] border-t-transparent" />
+                <span className="text-sm text-gray-600">업로드 중...</span>
+              </>
+            ) : isDragging ? (
+              <>
+                <svg className="w-8 h-8 text-[#8BA4B4]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                </svg>
+                <span className="text-sm text-[#8BA4B4] font-medium">여기에 놓으세요</span>
               </>
             ) : (
               <>
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                 </svg>
-                파일 업로드
+                <span className="text-sm text-gray-600">클릭 또는 드래그앤드롭</span>
+                <span className="text-xs text-gray-400">이미지, 오디오, 비디오, 텍스트</span>
               </>
             )}
-          </button>
-          <p className="text-xs text-gray-500 text-center mt-2">
-            이미지, 오디오, 비디오, 텍스트 파일 지원
-          </p>
+          </div>
         </div>
 
         {/* Filter Tabs */}
