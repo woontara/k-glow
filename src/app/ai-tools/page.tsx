@@ -100,8 +100,8 @@ export default function AiToolsPage() {
   const [sampleLoading, setSampleLoading] = useState(false);
   const [sampleAudio, setSampleAudio] = useState<HTMLAudioElement | null>(null);
 
-  // 라이브러리 사이드바
-  const [librarySidebarOpen, setLibrarySidebarOpen] = useState(false);
+  // 라이브러리 사이드바 (페이지 진입 시 바로 열림)
+  const [librarySidebarOpen, setLibrarySidebarOpen] = useState(true);
   const [libraryFilterType, setLibraryFilterType] = useState<WorkItemType | undefined>(undefined);
   const [selectedLibraryAudio, setSelectedLibraryAudio] = useState<LibraryItem | null>(null);
   const [savingToLibrary, setSavingToLibrary] = useState(false);
@@ -366,26 +366,13 @@ export default function AiToolsPage() {
     <div className="min-h-screen bg-gradient-to-br from-[#f8f9fa] via-white to-[#f0f4f8] py-12 px-4">
       <div className="max-w-6xl mx-auto">
         {/* 헤더 */}
-        <div className="text-center mb-12 relative">
+        <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
             AI 도구
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
             한국 브랜드를 위한 AI 도구입니다. 배경 제거, 이미지 업스케일링, 음성 생성 등 다양한 기능을 사용해보세요.
           </p>
-          {/* 라이브러리 버튼 */}
-          <button
-            onClick={() => {
-              setLibraryFilterType(undefined);
-              setLibrarySidebarOpen(true);
-            }}
-            className="absolute right-0 top-0 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2 text-gray-700 shadow-sm"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-            </svg>
-            라이브러리
-          </button>
         </div>
 
         {/* 모델 선택 */}
