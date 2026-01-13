@@ -401,41 +401,37 @@ export default function WorkLibrarySidebar({
                 <div
                   key={item.id}
                   onClick={() => onSelect?.(item)}
-                  className={`p-3 rounded-lg border transition-all cursor-pointer group ${
+                  className={`px-2 py-1.5 rounded transition-all cursor-pointer group ${
                     selectedItemId === item.id
-                      ? 'border-[#8BA4B4] bg-[#8BA4B4]/10'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-[#8BA4B4]/50 hover:bg-gray-50 dark:hover:bg-gray-800'
+                      ? 'bg-[#8BA4B4]/20'
+                      : 'hover:bg-gray-100 dark:hover:bg-gray-800'
                   }`}
                 >
-                  <div className="flex items-start gap-3">
-                    {/* Thumbnail / Icon */}
-                    <div className="flex-shrink-0 w-12 h-12 rounded bg-gray-100 dark:bg-gray-800 flex items-center justify-center overflow-hidden">
+                  <div className="flex items-center gap-2">
+                    {/* Thumbnail / Icon - 윈도우 자세히 보기 스타일 */}
+                    <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center overflow-hidden">
                       {item.type === 'IMAGE' && item.url ? (
-                        <img src={item.url} alt="" className="w-full h-full object-cover" />
+                        <img src={item.url} alt="" className="w-5 h-5 object-cover rounded-sm" />
                       ) : item.type === 'VIDEO' && item.thumbnail ? (
-                        <img src={item.thumbnail} alt="" className="w-full h-full object-cover" />
+                        <img src={item.thumbnail} alt="" className="w-5 h-5 object-cover rounded-sm" />
                       ) : (
-                        <span className="text-gray-400">{getTypeIcon(item.type)}</span>
+                        <span className="text-gray-500">{getTypeIcon(item.type)}</span>
                       )}
                     </div>
 
                     {/* Info */}
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm text-gray-900 dark:text-white truncate">
+                      <p className="text-sm text-gray-900 dark:text-white truncate">
                         {item.name}
                       </p>
-                      <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
-                        <span className={`px-1.5 py-0.5 rounded ${getTypeColor(item.type)}`}>
-                          {getTypeLabel(item.type)}
-                        </span>
-                        {item.metadata?.duration && (
-                          <span>{formatDuration(item.metadata.duration)}</span>
-                        )}
-                        {item.metadata?.fileSize && (
-                          <span>{formatFileSize(item.metadata.fileSize)}</span>
-                        )}
-                      </div>
                     </div>
+
+                    {/* 파일 크기 */}
+                    {item.metadata?.fileSize && (
+                      <span className="text-xs text-gray-400 flex-shrink-0">
+                        {formatFileSize(item.metadata.fileSize)}
+                      </span>
+                    )}
 
                     {/* Actions */}
                     <div className="flex-shrink-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
