@@ -118,6 +118,21 @@ export default async function AdminPage() {
             </div>
           </div>
         </Link>
+
+        <Link
+          href="/admin/call"
+          className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md hover:border-green-400 transition-all group"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center text-white text-2xl">
+              📞
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900 group-hover:text-green-600">전화/SMS 발신</h2>
+              <p className="text-sm text-gray-500">고객사 전화 및 문자 발신</p>
+            </div>
+          </div>
+        </Link>
       </div>
 
       <div className="mb-4">
