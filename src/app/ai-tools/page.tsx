@@ -21,7 +21,12 @@ interface AiModel {
 interface ProcessingResult {
   image?: { url: string };
   video?: { url: string };
-  audio?: { url: string };
+  audio?: {
+    url: string;
+    file_size?: number;
+    content_type?: string;
+  };
+  duration_ms?: number;
 }
 
 const categoryConfig: Record<AiModelCategory, { icon: string; gradient: string; border: string }> = {
@@ -407,13 +412,28 @@ export default function AiToolsPage() {
                               onChange={(e) => setTtsVoice(e.target.value)}
                               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8BA4B4] focus:border-transparent"
                             >
-                              <option value="Wise_Woman">현명한 여성</option>
-                              <option value="Friendly_Person">친근한 목소리</option>
-                              <option value="Inspirational_girl">영감적인 소녀</option>
-                              <option value="Deep_Voice_Man">깊은 남성 목소리</option>
-                              <option value="Calm_Woman">차분한 여성</option>
-                              <option value="Newsman">뉴스 앵커</option>
-                              <option value="Cartoon_Man">만화 남성</option>
+                              <optgroup label="여성 음성">
+                                <option value="Wise_Woman">현명한 여성</option>
+                                <option value="Calm_Woman">차분한 여성</option>
+                                <option value="Inspirational_girl">영감적인 소녀</option>
+                                <option value="Cute_Girl">귀여운 소녀</option>
+                                <option value="Lively_Girl">활발한 소녀</option>
+                                <option value="Patient_Woman">차분한 상담사</option>
+                                <option value="Young_Woman">젊은 여성</option>
+                              </optgroup>
+                              <optgroup label="남성 음성">
+                                <option value="Deep_Voice_Man">깊은 남성</option>
+                                <option value="Confident_Man">자신감 있는 남성</option>
+                                <option value="Newsman">뉴스 앵커</option>
+                                <option value="Cartoon_Man">만화 남성</option>
+                                <option value="Gentle_Man">부드러운 남성</option>
+                                <option value="Serious_Man">진지한 남성</option>
+                              </optgroup>
+                              <optgroup label="중성/특수">
+                                <option value="Friendly_Person">친근한 목소리</option>
+                                <option value="Narrator">나레이터</option>
+                                <option value="Podcast_Host">팟캐스트 호스트</option>
+                              </optgroup>
                             </select>
                           </div>
                           <div>
@@ -434,25 +454,40 @@ export default function AiToolsPage() {
                             </select>
                           </div>
                         </div>
-                        <button
-                          onClick={playSample}
-                          disabled={sampleLoading}
-                          className="w-full py-3 bg-gradient-to-r from-pink-100 to-rose-100 text-pink-700 font-medium rounded-lg hover:from-pink-200 hover:to-rose-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
-                        >
-                          {sampleLoading ? (
-                            <>
-                              <div className="animate-spin rounded-full h-4 w-4 border-2 border-pink-500 border-t-transparent"></div>
-                              샘플 생성 중...
-                            </>
-                          ) : (
-                            <>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={playSample}
+                            disabled={sampleLoading}
+                            className="flex-1 py-3 bg-gradient-to-r from-pink-100 to-rose-100 text-pink-700 font-medium rounded-lg hover:from-pink-200 hover:to-rose-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                          >
+                            {sampleLoading ? (
+                              <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-2 border-pink-500 border-t-transparent"></div>
+                                샘플 생성 중...
+                              </>
+                            ) : (
+                              <>
+                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                  <path d="M8 5v14l11-7z"/>
+                                </svg>
+                                샘플 듣기
+                              </>
+                            )}
+                          </button>
+                          {sampleAudio && (
+                            <button
+                              onClick={() => {
+                                sampleAudio.pause();
+                                setSampleAudio(null);
+                              }}
+                              className="px-4 py-3 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-all flex items-center justify-center"
+                            >
                               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M8 5v14l11-7z"/>
+                                <path d="M6 6h12v12H6z"/>
                               </svg>
-                              선택한 음성 샘플 듣기
-                            </>
+                            </button>
                           )}
-                        </button>
+                        </div>
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -694,9 +729,28 @@ export default function AiToolsPage() {
                       </div>
                     ) : result?.audio?.url ? (
                       <div className="space-y-4 w-full">
-                        <div className="bg-gradient-to-br from-pink-100 to-rose-100 rounded-xl p-8 text-center">
-                          <div className="text-6xl mb-4">🎙️</div>
-                          <p className="text-gray-600 mb-4">음성이 생성되었습니다</p>
+                        <div className="bg-gradient-to-br from-pink-100 to-rose-100 rounded-xl p-6 text-center">
+                          <div className="text-5xl mb-3">🎙️</div>
+                          <p className="text-gray-700 font-medium mb-2">음성이 생성되었습니다</p>
+                          {/* 메타 정보 */}
+                          <div className="flex justify-center gap-4 text-sm text-gray-500 mb-4">
+                            {result.duration_ms && (
+                              <span className="flex items-center gap-1">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                {Math.floor(result.duration_ms / 1000)}초
+                              </span>
+                            )}
+                            {result.audio.file_size && (
+                              <span className="flex items-center gap-1">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                {(result.audio.file_size / 1024).toFixed(1)} KB
+                              </span>
+                            )}
+                          </div>
                           <audio
                             src={result.audio.url}
                             controls
@@ -710,7 +764,7 @@ export default function AiToolsPage() {
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                           </svg>
-                          다운로드
+                          MP3 다운로드
                         </button>
                       </div>
                     ) : (
