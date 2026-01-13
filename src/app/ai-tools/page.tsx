@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { fal } from '@fal-ai/client';
 
 type AiModelCategory = 'IMAGE_GENERATION' | 'BACKGROUND_REMOVAL' | 'UPSCALING' | 'VIDEO_GENERATION';
 
@@ -109,24 +110,21 @@ export default function AiToolsPage() {
     }
   };
 
-  // fal.ai 스토리지에 파일 업로드
-  const uploadToStorage = async (file: File, modelId: string): Promise<string> => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('modelId', modelId);
-
-    const response = await fetch('/api/ai-tools/upload', {
-      method: 'POST',
-      body: formData,
-    });
-
+  // API 키를 가져와서 fal 클라이언트에 설정
+  const configureFalClient = async (modelId: string) => {
+    const response = await fetch(`/api/ai-tools/key?modelId=${modelId}`);
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || '파일 업로드 실패');
+      throw new Error('API 키를 가져올 수 없습니다');
     }
-
     const data = await response.json();
-    return data.url;
+    fal.config({ credentials: data.apiKey });
+  };
+
+  // fal.ai 스토리지에 파일 업로드 (클라이언트 직접 업로드)
+  const uploadToStorage = async (file: File, modelId: string): Promise<string> => {
+    await configureFalClient(modelId);
+    const url = await fal.storage.upload(file);
+    return url;
   };
 
   const handleProcess = async () => {
