@@ -77,6 +77,8 @@ export default function AiToolsPage() {
   const [ttsVoice, setTtsVoice] = useState('Wise_Woman');
   const [ttsEmotion, setTtsEmotion] = useState('neutral');
   const [ttsSpeed, setTtsSpeed] = useState(1.0);
+  const [sampleLoading, setSampleLoading] = useState(false);
+  const [sampleAudio, setSampleAudio] = useState<HTMLAudioElement | null>(null);
 
   const fetchModels = useCallback(async () => {
     try {
@@ -137,6 +139,55 @@ export default function AiToolsPage() {
     await configureFalClient(modelId);
     const url = await fal.storage.upload(file);
     return url;
+  };
+
+  // TTS 샘플 미리듣기
+  const playSample = async () => {
+    if (!selectedModel || sampleLoading) return;
+
+    // 기존 오디오 정지
+    if (sampleAudio) {
+      sampleAudio.pause();
+      setSampleAudio(null);
+    }
+
+    setSampleLoading(true);
+    setError(null);
+
+    try {
+      const sampleText = '안녕하세요. 저는 AI 음성 도우미입니다. 이 음성이 마음에 드시나요?';
+
+      const params = {
+        text: sampleText,
+        voice_id: ttsVoice,
+        emotion: ttsEmotion,
+        speed: ttsSpeed,
+      };
+
+      const response = await fetch(`/api/ai-tools/${selectedModel.id}/run`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || '샘플 생성 실패');
+      }
+
+      const data = await response.json();
+      const audioUrl = data.result?.audio?.url;
+
+      if (audioUrl) {
+        const audio = new Audio(audioUrl);
+        audio.play();
+        setSampleAudio(audio);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '샘플 재생에 실패했습니다');
+    } finally {
+      setSampleLoading(false);
+    }
   };
 
   const handleProcess = async () => {
@@ -228,6 +279,11 @@ export default function AiToolsPage() {
     setResult(null);
     setError(null);
     setTtsText('');
+    // 샘플 오디오 정지
+    if (sampleAudio) {
+      sampleAudio.pause();
+      setSampleAudio(null);
+    }
   };
 
   if (status === 'loading' || loading) {
@@ -340,42 +396,63 @@ export default function AiToolsPage() {
                           {ttsText.length} / 5,000자
                         </p>
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            음성
-                          </label>
-                          <select
-                            value={ttsVoice}
-                            onChange={(e) => setTtsVoice(e.target.value)}
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8BA4B4] focus:border-transparent"
-                          >
-                            <option value="Wise_Woman">현명한 여성</option>
-                            <option value="Friendly_Person">친근한 목소리</option>
-                            <option value="Inspirational_girl">영감적인 소녀</option>
-                            <option value="Deep_Voice_Man">깊은 남성 목소리</option>
-                            <option value="Calm_Woman">차분한 여성</option>
-                            <option value="Newsman">뉴스 앵커</option>
-                            <option value="Cartoon_Man">만화 남성</option>
-                          </select>
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              음성
+                            </label>
+                            <select
+                              value={ttsVoice}
+                              onChange={(e) => setTtsVoice(e.target.value)}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8BA4B4] focus:border-transparent"
+                            >
+                              <option value="Wise_Woman">현명한 여성</option>
+                              <option value="Friendly_Person">친근한 목소리</option>
+                              <option value="Inspirational_girl">영감적인 소녀</option>
+                              <option value="Deep_Voice_Man">깊은 남성 목소리</option>
+                              <option value="Calm_Woman">차분한 여성</option>
+                              <option value="Newsman">뉴스 앵커</option>
+                              <option value="Cartoon_Man">만화 남성</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              감정
+                            </label>
+                            <select
+                              value={ttsEmotion}
+                              onChange={(e) => setTtsEmotion(e.target.value)}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8BA4B4] focus:border-transparent"
+                            >
+                              <option value="neutral">중립</option>
+                              <option value="happy">기쁨</option>
+                              <option value="sad">슬픔</option>
+                              <option value="angry">분노</option>
+                              <option value="fearful">두려움</option>
+                              <option value="surprised">놀람</option>
+                            </select>
+                          </div>
                         </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            감정
-                          </label>
-                          <select
-                            value={ttsEmotion}
-                            onChange={(e) => setTtsEmotion(e.target.value)}
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8BA4B4] focus:border-transparent"
-                          >
-                            <option value="neutral">중립</option>
-                            <option value="happy">기쁨</option>
-                            <option value="sad">슬픔</option>
-                            <option value="angry">분노</option>
-                            <option value="fearful">두려움</option>
-                            <option value="surprised">놀람</option>
-                          </select>
-                        </div>
+                        <button
+                          onClick={playSample}
+                          disabled={sampleLoading}
+                          className="w-full py-3 bg-gradient-to-r from-pink-100 to-rose-100 text-pink-700 font-medium rounded-lg hover:from-pink-200 hover:to-rose-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                        >
+                          {sampleLoading ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-2 border-pink-500 border-t-transparent"></div>
+                              샘플 생성 중...
+                            </>
+                          ) : (
+                            <>
+                              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M8 5v14l11-7z"/>
+                              </svg>
+                              선택한 음성 샘플 듣기
+                            </>
+                          )}
+                        </button>
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
