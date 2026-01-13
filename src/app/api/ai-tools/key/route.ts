@@ -17,19 +17,26 @@ export async function GET(request: NextRequest) {
 
     const modelId = request.nextUrl.searchParams.get('modelId');
 
-    if (!modelId) {
-      return NextResponse.json({ error: '모델 ID가 필요합니다' }, { status: 400 });
+    let apiKey: string | null | undefined = null;
+
+    // 'any'인 경우 아무 활성 모델의 API 키 또는 환경변수 사용
+    if (modelId === 'any' || !modelId) {
+      const anyModel = await prisma.aiModel.findFirst({
+        where: { isActive: true, apiKey: { not: null } },
+        select: { apiKey: true },
+      });
+      apiKey = anyModel?.apiKey || process.env.FAL_KEY;
+    } else {
+      const aiModel = await prisma.aiModel.findUnique({
+        where: { id: modelId },
+      });
+
+      if (!aiModel) {
+        return NextResponse.json({ error: '모델을 찾을 수 없습니다' }, { status: 404 });
+      }
+
+      apiKey = aiModel.apiKey || process.env.FAL_KEY;
     }
-
-    const aiModel = await prisma.aiModel.findUnique({
-      where: { id: modelId },
-    });
-
-    if (!aiModel) {
-      return NextResponse.json({ error: '모델을 찾을 수 없습니다' }, { status: 404 });
-    }
-
-    const apiKey = aiModel.apiKey || process.env.FAL_KEY;
 
     if (!apiKey) {
       return NextResponse.json({ error: 'API 키가 설정되지 않았습니다' }, { status: 500 });
