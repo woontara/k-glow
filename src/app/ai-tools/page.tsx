@@ -281,10 +281,18 @@ export default function AiToolsPage() {
         params = { image_url: imageUrl };
 
         if (selectedModel.category === 'UPSCALING') {
-          params.upscale_factor = upscaleFactor;
+          // CCSR은 scale, Clarity는 upscale_factor 사용
+          if (selectedModel.modelId.includes('ccsr')) {
+            params.scale = upscaleFactor;
+          } else {
+            params.upscale_factor = upscaleFactor;
+          }
         } else if (selectedModel.category === 'BACKGROUND_REMOVAL') {
-          params.model = bgRemovalModel;
-          params.output_format = outputFormat;
+          // Bria RMBG는 추가 옵션 없음, BiRefNet은 model/output_format 필요
+          if (!selectedModel.modelId.includes('bria')) {
+            params.model = bgRemovalModel;
+            params.output_format = outputFormat;
+          }
         } else if (selectedModel.category === 'VIDEO_GENERATION') {
           // 라이브러리에서 선택한 오디오 또는 업로드한 파일 사용
           if (selectedLibraryAudio) {
@@ -692,30 +700,47 @@ export default function AiToolsPage() {
 
                   {/* 업스케일링 설정 */}
                   {selectedModel.category === 'UPSCALING' && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        업스케일 배율
-                      </label>
-                      <div className="flex gap-2">
-                        {[2, 3, 4].map((factor) => (
-                          <button
-                            key={factor}
-                            onClick={() => setUpscaleFactor(factor)}
-                            className={`flex-1 py-3 rounded-lg font-medium transition-colors ${
-                              upscaleFactor === factor
-                                ? 'bg-[#8BA4B4] text-white'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                            }`}
-                          >
-                            {factor}x
-                          </button>
-                        ))}
+                    <div className="space-y-4">
+                      {/* CCSR 모델 안내 */}
+                      {selectedModel.modelId.includes('ccsr') && (
+                        <div className="p-4 bg-green-50 border border-green-200 rounded-xl">
+                          <div className="flex items-start gap-3">
+                            <span className="text-xl">🚀</span>
+                            <div>
+                              <p className="font-medium text-green-900">CCSR (SOTA 업스케일러)</p>
+                              <p className="text-sm text-green-700 mt-1">
+                                최신 기술(State of the Art) 업스케일러로 고품질 결과물을 생성합니다.
+                                무료로 사용 가능합니다.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          업스케일 배율
+                        </label>
+                        <div className="flex gap-2">
+                          {[2, 3, 4].map((factor) => (
+                            <button
+                              key={factor}
+                              onClick={() => setUpscaleFactor(factor)}
+                              className={`flex-1 py-3 rounded-lg font-medium transition-colors ${
+                                upscaleFactor === factor
+                                  ? 'bg-[#8BA4B4] text-white'
+                                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                              }`}
+                            >
+                              {factor}x
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   )}
 
-                  {/* 배경 제거 설정 */}
-                  {selectedModel.category === 'BACKGROUND_REMOVAL' && (
+                  {/* 배경 제거 설정 - BiRefNet만 추가 옵션 표시 */}
+                  {selectedModel.category === 'BACKGROUND_REMOVAL' && !selectedModel.modelId.includes('bria') && (
                     <>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -753,6 +778,22 @@ export default function AiToolsPage() {
                         </div>
                       </div>
                     </>
+                  )}
+
+                  {/* Bria RMBG 안내 */}
+                  {selectedModel.category === 'BACKGROUND_REMOVAL' && selectedModel.modelId.includes('bria') && (
+                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                      <div className="flex items-start gap-3">
+                        <span className="text-xl">✨</span>
+                        <div>
+                          <p className="font-medium text-blue-900">Bria RMBG 2.0</p>
+                          <p className="text-sm text-blue-700 mt-1">
+                            상업용 라이선스 데이터로 학습된 고품질 배경 제거 모델입니다.
+                            이미지를 업로드하면 자동으로 배경이 제거됩니다.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   )}
 
                   {/* 실행 버튼 */}

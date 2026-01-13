@@ -16,7 +16,17 @@ export interface FalVideoOutput extends FalImageOutput {
   num_frames: number;
 }
 
-// 배경 제거 (BiRefNet) 입력
+// 배경 제거 (Bria RMBG 2.0) 입력 - 상업용 라이선스, 고품질
+export interface BriaRmbgInput {
+  image_url: string;
+  sync_mode?: boolean;
+}
+
+export interface BriaRmbgOutput {
+  image: FalImageOutput;
+}
+
+// 배경 제거 (BiRefNet) 입력 - 레거시 지원
 export interface BiRefNetInput {
   image_url: string;
   model?: 'General Use (Light)' | 'General Use (Heavy)' | 'Portrait' | 'Matting';
@@ -29,7 +39,26 @@ export interface BiRefNetOutput {
   image: FalImageOutput;
 }
 
-// 업스케일링 (Clarity Upscaler) 입력
+// 업스케일링 (CCSR) 입력 - SOTA 업스케일러, 무료
+export interface CcsrUpscalerInput {
+  image_url: string;
+  scale?: number; // 1-4 (기본: 2)
+  tile_diffusion?: 'none' | 'mix' | 'gaussian';
+  tile_diffusion_size?: number;
+  tile_diffusion_stride?: number;
+  steps?: number; // 10-100 (기본: 50)
+  t_max?: number; // 0-1 (기본: 0.6667)
+  t_min?: number; // 0-1 (기본: 0.3333)
+  color_fix_type?: 'none' | 'wavelet' | 'adain';
+  seed?: number;
+}
+
+export interface CcsrUpscalerOutput {
+  image: FalImageOutput;
+  seed: number;
+}
+
+// 업스케일링 (Clarity Upscaler) 입력 - 레거시 지원
 export interface ClarityUpscalerInput {
   image_url: string;
   upscale_factor?: number; // 1-4
@@ -59,17 +88,30 @@ export interface AuroraOutput {
 
 // 모델별 기본 파라미터
 export const defaultModelParams = {
+  // 배경 제거 - Bria RMBG 2.0 (추천)
+  'fal-ai/bria/background/remove': {
+    sync_mode: false,
+  },
+  // 배경 제거 - BiRefNet (레거시)
   'fal-ai/birefnet': {
     model: 'General Use (Light)',
     operating_resolution: '1024x1024',
     output_format: 'png',
     refine_foreground: true,
   },
+  // 업스케일링 - CCSR (추천, 무료)
+  'fal-ai/ccsr': {
+    scale: 2,
+    steps: 50,
+    color_fix_type: 'adain',
+  },
+  // 업스케일링 - Clarity (레거시)
   'fal-ai/clarity-upscaler': {
     upscale_factor: 2,
     creativity: 0.35,
     resemblance: 0.6,
   },
+  // 비디오 생성
   'fal-ai/creatify/aurora': {
     resolution: '720p',
     guidance_scale: 1,
