@@ -146,53 +146,27 @@ export default function AiToolsPage() {
     return url;
   };
 
-  // TTS 샘플 미리듣기
-  const playSample = async () => {
-    if (!selectedModel || sampleLoading) return;
-
+  // TTS 샘플 미리듣기 (미리 생성된 정적 파일 사용)
+  const playSample = () => {
     // 기존 오디오 정지
     if (sampleAudio) {
       sampleAudio.pause();
       setSampleAudio(null);
+      return; // 토글 기능: 재생 중이면 정지만 하고 끝
     }
 
-    setSampleLoading(true);
-    setError(null);
+    // 정적 샘플 파일 재생
+    const sampleUrl = `/audio/samples/${ttsVoice}.mp3`;
+    const audio = new Audio(sampleUrl);
 
-    try {
-      const sampleText = '안녕하세요. 저는 AI 음성 도우미입니다. 이 음성이 마음에 드시나요?';
+    audio.onended = () => setSampleAudio(null);
+    audio.onerror = () => {
+      setError('샘플 파일을 재생할 수 없습니다');
+      setSampleAudio(null);
+    };
 
-      const params = {
-        text: sampleText,
-        voice_id: ttsVoice,
-        emotion: ttsEmotion,
-        speed: ttsSpeed,
-      };
-
-      const response = await fetch(`/api/ai-tools/${selectedModel.id}/run`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || '샘플 생성 실패');
-      }
-
-      const data = await response.json();
-      const audioUrl = data.result?.audio?.url;
-
-      if (audioUrl) {
-        const audio = new Audio(audioUrl);
-        audio.play();
-        setSampleAudio(audio);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '샘플 재생에 실패했습니다');
-    } finally {
-      setSampleLoading(false);
-    }
+    audio.play();
+    setSampleAudio(audio);
   };
 
   const handleProcess = async () => {
@@ -454,40 +428,30 @@ export default function AiToolsPage() {
                             </select>
                           </div>
                         </div>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={playSample}
-                            disabled={sampleLoading}
-                            className="flex-1 py-3 bg-gradient-to-r from-pink-100 to-rose-100 text-pink-700 font-medium rounded-lg hover:from-pink-200 hover:to-rose-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
-                          >
-                            {sampleLoading ? (
-                              <>
-                                <div className="animate-spin rounded-full h-4 w-4 border-2 border-pink-500 border-t-transparent"></div>
-                                샘플 생성 중...
-                              </>
-                            ) : (
-                              <>
-                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                                  <path d="M8 5v14l11-7z"/>
-                                </svg>
-                                샘플 듣기
-                              </>
-                            )}
-                          </button>
-                          {sampleAudio && (
-                            <button
-                              onClick={() => {
-                                sampleAudio.pause();
-                                setSampleAudio(null);
-                              }}
-                              className="px-4 py-3 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-all flex items-center justify-center"
-                            >
+                        <button
+                          onClick={playSample}
+                          className={`w-full py-3 font-medium rounded-lg transition-all flex items-center justify-center gap-2 ${
+                            sampleAudio
+                              ? 'bg-pink-500 text-white hover:bg-pink-600'
+                              : 'bg-gradient-to-r from-pink-100 to-rose-100 text-pink-700 hover:from-pink-200 hover:to-rose-200'
+                          }`}
+                        >
+                          {sampleAudio ? (
+                            <>
                               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                                 <path d="M6 6h12v12H6z"/>
                               </svg>
-                            </button>
+                              재생 중지
+                            </>
+                          ) : (
+                            <>
+                              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M8 5v14l11-7z"/>
+                              </svg>
+                              샘플 듣기
+                            </>
                           )}
-                        </div>
+                        </button>
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
