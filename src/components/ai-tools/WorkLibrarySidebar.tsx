@@ -118,17 +118,32 @@ export default function WorkLibrarySidebar({
 
     try {
       // fal.ai API 키 가져오기
+      console.log('[Library] API 키 요청 중...');
       const keyRes = await fetch('/api/ai-tools/key?modelId=any');
-      if (keyRes.ok) {
-        const keyData = await keyRes.json();
-        if (keyData.apiKey) {
-          fal.config({ credentials: keyData.apiKey });
-        }
+
+      if (!keyRes.ok) {
+        const errorData = await keyRes.json();
+        console.error('[Library] API 키 가져오기 실패:', errorData);
+        alert(`API 키 오류: ${errorData.error || '알 수 없는 오류'}`);
+        return;
       }
 
+      const keyData = await keyRes.json();
+      if (!keyData.apiKey) {
+        console.error('[Library] API 키가 없습니다');
+        alert('API 키가 설정되지 않았습니다.');
+        return;
+      }
+
+      console.log('[Library] API 키 설정 완료');
+      fal.config({ credentials: keyData.apiKey });
+
       for (const file of files) {
+        console.log(`[Library] 파일 업로드 시작: ${file.name}`);
+
         // fal.ai 스토리지에 업로드
         const url = await fal.storage.upload(file);
+        console.log(`[Library] fal.ai 업로드 완료: ${url}`);
 
         // 라이브러리에 저장
         const res = await fetch('/api/work-library/upload', {
@@ -145,12 +160,17 @@ export default function WorkLibrarySidebar({
 
         if (res.ok) {
           const data = await res.json();
+          console.log('[Library] 라이브러리 저장 완료:', data.item);
           setItems((prev) => [data.item, ...prev]);
+        } else {
+          const errorData = await res.json();
+          console.error('[Library] 라이브러리 저장 실패:', errorData);
+          alert(`저장 실패: ${errorData.error || '알 수 없는 오류'}`);
         }
       }
     } catch (error) {
-      console.error('파일 업로드 실패:', error);
-      alert('파일 업로드에 실패했습니다.');
+      console.error('[Library] 파일 업로드 실패:', error);
+      alert(`파일 업로드 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
     } finally {
       setUploading(false);
       if (fileInputRef.current) {
