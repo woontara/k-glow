@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { fal } from '@fal-ai/client';
 import WorkLibrarySidebar from '@/components/ai-tools/WorkLibrarySidebar';
 import { WorkItemType } from '@prisma/client';
@@ -106,6 +107,9 @@ export default function AiToolsPage() {
   const [selectedLibraryAudio, setSelectedLibraryAudio] = useState<LibraryItem | null>(null);
   const [savingToLibrary, setSavingToLibrary] = useState(false);
 
+  // 크레딧 잔액
+  const [creditBalance, setCreditBalance] = useState<number | null>(null);
+
   const fetchModels = useCallback(async () => {
     try {
       const response = await fetch('/api/ai-tools');
@@ -119,6 +123,18 @@ export default function AiToolsPage() {
     }
   }, []);
 
+  const fetchCreditBalance = useCallback(async () => {
+    try {
+      const response = await fetch('/api/billing/balance');
+      if (response.ok) {
+        const data = await response.json();
+        setCreditBalance(data.creditBalance);
+      }
+    } catch (err) {
+      console.error('잔액 조회 실패:', err);
+    }
+  }, []);
+
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/auth/signin');
@@ -126,8 +142,9 @@ export default function AiToolsPage() {
     }
     if (status === 'authenticated') {
       fetchModels();
+      fetchCreditBalance();
     }
-  }, [status, router, fetchModels]);
+  }, [status, router, fetchModels, fetchCreditBalance]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -320,6 +337,11 @@ export default function AiToolsPage() {
 
       const data = await response.json();
       setResult(data.result);
+
+      // 잔액 업데이트
+      if (data.creditBalance !== undefined) {
+        setCreditBalance(data.creditBalance);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : '처리에 실패했습니다');
     } finally {
@@ -374,13 +396,40 @@ export default function AiToolsPage() {
     <div className="min-h-screen bg-gradient-to-br from-[#f8f9fa] via-white to-[#f0f4f8] py-12 px-4">
       <div className="max-w-6xl mx-auto">
         {/* 헤더 */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
             AI 도구
           </h1>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
             한국 브랜드를 위한 AI 도구입니다. 배경 제거, 이미지 업스케일링, 음성 생성 등 다양한 기능을 사용해보세요.
           </p>
+        </div>
+
+        {/* 크레딧 잔액 표시 */}
+        <div className="flex justify-center mb-8">
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-gray-200 px-6 py-4 flex items-center gap-6 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center text-white text-lg">
+                $
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 font-medium">크레딧 잔액</p>
+                <p className="text-xl font-bold text-gray-900">
+                  {creditBalance !== null ? `$${creditBalance.toFixed(2)}` : '...'}
+                </p>
+              </div>
+            </div>
+            <div className="h-8 w-px bg-gray-200" />
+            <Link
+              href="/billing"
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 text-white text-sm font-medium rounded-lg hover:from-emerald-600 hover:to-teal-700 transition-all"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              충전하기
+            </Link>
+          </div>
         </div>
 
         {/* 모델 선택 */}
