@@ -57,48 +57,46 @@ export async function POST(
     const pricePerUse = aiModel.pricePerUse || 0;
     let currentBalance = user.creditBalance;
 
-    // 4. 크레딧 확인 (ADMIN은 무료)
-    if (user.role !== 'ADMIN') {
-      // 크레딧이 전혀 없는 경우 - 충전 필요
-      if (currentBalance <= 0) {
-        return NextResponse.json(
-          {
-            error: '크레딧이 없습니다. 먼저 크레딧을 충전해주세요.',
-            creditBalance: currentBalance,
-            pricePerUse,
-            needsCharge: true,
-          },
-          { status: 402 } // Payment Required
-        );
-      }
+    // 4. 크레딧 확인 (모든 사용자 동일 적용)
+    // 크레딧이 전혀 없는 경우 - 충전 필요
+    if (currentBalance <= 0) {
+      return NextResponse.json(
+        {
+          error: '크레딧이 없습니다. 먼저 크레딧을 충전해주세요.',
+          creditBalance: currentBalance,
+          pricePerUse,
+          needsCharge: true,
+        },
+        { status: 402 } // Payment Required
+      );
+    }
 
-      // 유료 모델인데 잔액이 부족한 경우
-      if (pricePerUse > 0 && currentBalance < pricePerUse) {
-        // 자동 충전 시도
-        if (user.autoRecharge && user.billingKey) {
-          const chargeResult = await executeAutoCharge(user.id);
-          if (chargeResult.success && chargeResult.newBalance !== undefined) {
-            currentBalance = chargeResult.newBalance;
-          } else {
-            return NextResponse.json(
-              {
-                error: '잔액이 부족합니다. 자동 충전에 실패했습니다.',
-                creditBalance: currentBalance,
-                pricePerUse,
-              },
-              { status: 402 } // Payment Required
-            );
-          }
+    // 유료 모델인데 잔액이 부족한 경우
+    if (pricePerUse > 0 && currentBalance < pricePerUse) {
+      // 자동 충전 시도
+      if (user.autoRecharge && user.billingKey) {
+        const chargeResult = await executeAutoCharge(user.id);
+        if (chargeResult.success && chargeResult.newBalance !== undefined) {
+          currentBalance = chargeResult.newBalance;
         } else {
           return NextResponse.json(
             {
-              error: `잔액이 부족합니다. 현재 잔액: $${currentBalance.toFixed(2)}, 필요 금액: $${pricePerUse.toFixed(2)}`,
+              error: '잔액이 부족합니다. 자동 충전에 실패했습니다.',
               creditBalance: currentBalance,
               pricePerUse,
             },
             { status: 402 } // Payment Required
           );
         }
+      } else {
+        return NextResponse.json(
+          {
+            error: `잔액이 부족합니다. 현재 잔액: $${currentBalance.toFixed(2)}, 필요 금액: $${pricePerUse.toFixed(2)}`,
+            creditBalance: currentBalance,
+            pricePerUse,
+          },
+          { status: 402 } // Payment Required
+        );
       }
     }
 
@@ -143,9 +141,9 @@ export async function POST(
     // 10. 결과에서 출력 URL 추출
     const outputUrl = extractOutputUrl(result);
 
-    // 11. 크레딧 차감 (무료 모델이 아닌 경우, ADMIN은 제외)
+    // 11. 크레딧 차감 (무료 모델이 아닌 경우)
     let newBalance = currentBalance;
-    if (pricePerUse > 0 && user.role !== 'ADMIN') {
+    if (pricePerUse > 0) {
       newBalance = currentBalance - pricePerUse;
 
       await prisma.$transaction([
