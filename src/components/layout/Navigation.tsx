@@ -286,6 +286,22 @@ export default function Navigation() {
                             </div>
                           </Link>
 
+                          <Link
+                            href="/billing"
+                            className="flex items-center gap-4 px-4 py-3 text-sm text-[#636E72] hover:bg-[#8BA4B4]/10 hover:text-[#5A7A8A] rounded-xl transition-all duration-200"
+                            onClick={() => setUserMenuOpen(false)}
+                          >
+                            <div className="w-9 h-9 bg-[#8BA4B4]/10 rounded-xl flex items-center justify-center">
+                              <svg className="w-5 h-5 text-[#8BA4B4]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                              </svg>
+                            </div>
+                            <div>
+                              <span className="font-medium">결제 설정</span>
+                              <p className="text-[10px] text-[#8BA4B4]">Billing Settings</p>
+                            </div>
+                          </Link>
+
                           {session.user?.role === 'ADMIN' && (
                             <Link
                               href="/admin"
@@ -426,6 +442,17 @@ export default function Navigation() {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         내 인증 현황
+                      </Link>
+
+                      <Link
+                        href="/billing"
+                        className="flex items-center gap-3 px-5 py-4 text-sm font-medium text-[#636E72] hover:bg-[#8BA4B4]/10 rounded-2xl transition-colors"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <svg className="w-5 h-5 text-[#8BA4B4]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                        </svg>
+                        결제 설정
                       </Link>
 
                       {session.user?.role === 'ADMIN' && (
