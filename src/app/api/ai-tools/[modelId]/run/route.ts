@@ -57,10 +57,23 @@ export async function POST(
     const pricePerUse = aiModel.pricePerUse || 0;
     let currentBalance = user.creditBalance;
 
-    // 4. 크레딧 확인 (무료 모델이 아닌 경우, ADMIN은 무료)
-    if (pricePerUse > 0 && user.role !== 'ADMIN') {
-      // 잔액 부족한 경우
-      if (currentBalance < pricePerUse) {
+    // 4. 크레딧 확인 (ADMIN은 무료)
+    if (user.role !== 'ADMIN') {
+      // 크레딧이 전혀 없는 경우 - 충전 필요
+      if (currentBalance <= 0) {
+        return NextResponse.json(
+          {
+            error: '크레딧이 없습니다. 먼저 크레딧을 충전해주세요.',
+            creditBalance: currentBalance,
+            pricePerUse,
+            needsCharge: true,
+          },
+          { status: 402 } // Payment Required
+        );
+      }
+
+      // 유료 모델인데 잔액이 부족한 경우
+      if (pricePerUse > 0 && currentBalance < pricePerUse) {
         // 자동 충전 시도
         if (user.autoRecharge && user.billingKey) {
           const chargeResult = await executeAutoCharge(user.id);

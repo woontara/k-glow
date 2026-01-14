@@ -342,6 +342,19 @@ export default function AiToolsPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
+
+        // 크레딧 부족 에러 (402) - 충전 페이지로 안내
+        if (response.status === 402) {
+          if (errorData.needsCharge) {
+            // 크레딧이 전혀 없는 경우
+            if (confirm('크레딧이 없습니다. 충전 페이지로 이동하시겠습니까?')) {
+              router.push('/billing');
+              return;
+            }
+          }
+          throw new Error(errorData.error || '크레딧이 부족합니다');
+        }
+
         throw new Error(errorData.error || 'AI 처리 실패');
       }
 
