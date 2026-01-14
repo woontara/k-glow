@@ -46,6 +46,15 @@ interface ProcessingResult {
   duration_ms?: number;
 }
 
+// USD to KRW 환율 (약 1,400원/$)
+const USD_KRW_RATE = 1400;
+
+// USD를 KRW로 변환하고 포맷팅
+const formatKRW = (usd: number): string => {
+  const krw = Math.round(usd * USD_KRW_RATE);
+  return krw.toLocaleString('ko-KR');
+};
+
 const categoryConfig: Record<AiModelCategory, { icon: string; gradient: string; border: string }> = {
   IMAGE_GENERATION: {
     icon: '🎨',
@@ -411,12 +420,15 @@ export default function AiToolsPage() {
           <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-gray-200 px-6 py-4 flex items-center gap-6 shadow-sm">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center text-white text-lg">
-                $
+                ₩
               </div>
               <div>
                 <p className="text-xs text-gray-500 font-medium">크레딧 잔액</p>
                 <p className="text-xl font-bold text-gray-900">
-                  {creditBalance !== null ? `$${creditBalance.toFixed(2)}` : '...'}
+                  {creditBalance !== null ? `₩${formatKRW(creditBalance)}` : '...'}
+                </p>
+                <p className="text-xs text-gray-400">
+                  {creditBalance !== null ? `$${creditBalance.toFixed(2)}` : ''}
                 </p>
               </div>
             </div>
@@ -463,9 +475,12 @@ export default function AiToolsPage() {
                         {model.name}
                       </h3>
                       {model.pricePerUse > 0 ? (
-                        <span className="px-2 py-1 bg-emerald-100 text-emerald-700 text-sm font-medium rounded-lg">
-                          ${model.pricePerUse.toFixed(2)}
-                        </span>
+                        <div className="text-right">
+                          <span className="px-2 py-1 bg-emerald-100 text-emerald-700 text-sm font-medium rounded-lg">
+                            ₩{formatKRW(model.pricePerUse)}
+                          </span>
+                          <p className="text-xs text-gray-400 mt-1">${model.pricePerUse.toFixed(2)}</p>
+                        </div>
                       ) : (
                         <span className="px-2 py-1 bg-gray-100 text-gray-600 text-sm font-medium rounded-lg">
                           무료

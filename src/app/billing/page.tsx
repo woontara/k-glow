@@ -46,6 +46,15 @@ const categoryLabels: Record<string, { icon: string; color: string }> = {
   IMAGE_GENERATION: { icon: '🎨', color: 'bg-purple-100 text-purple-700' },
 };
 
+// USD to KRW 환율 (약 1,400원/$)
+const USD_KRW_RATE = 1400;
+
+// USD를 KRW로 변환하고 포맷팅
+const formatKRW = (usd: number): string => {
+  const krw = Math.round(usd * USD_KRW_RATE);
+  return krw.toLocaleString('ko-KR');
+};
+
 export default function BillingPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -318,6 +327,9 @@ export default function BillingPage() {
                 </span>
                 <span className="text-white/70">USD</span>
               </div>
+              <p className="text-white/60 text-lg mt-1">
+                약 ₩{formatKRW(settings?.creditBalance || 0)}
+              </p>
               {settings?.autoRecharge && (
                 <p className="mt-3 text-sm text-white/80 flex items-center gap-2">
                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -335,12 +347,12 @@ export default function BillingPage() {
                   onChange={(e) => setChargeAmount(Number(e.target.value))}
                   className="bg-white/20 border border-white/30 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-white/50"
                 >
-                  <option value={5} className="text-gray-900">$5</option>
-                  <option value={10} className="text-gray-900">$10</option>
-                  <option value={15} className="text-gray-900">$15</option>
-                  <option value={25} className="text-gray-900">$25</option>
-                  <option value={50} className="text-gray-900">$50</option>
-                  <option value={100} className="text-gray-900">$100</option>
+                  <option value={5} className="text-gray-900">$5 (₩{formatKRW(5)})</option>
+                  <option value={10} className="text-gray-900">$10 (₩{formatKRW(10)})</option>
+                  <option value={15} className="text-gray-900">$15 (₩{formatKRW(15)})</option>
+                  <option value={25} className="text-gray-900">$25 (₩{formatKRW(25)})</option>
+                  <option value={50} className="text-gray-900">$50 (₩{formatKRW(50)})</option>
+                  <option value={100} className="text-gray-900">$100 (₩{formatKRW(100)})</option>
                 </select>
                 <button
                   onClick={handleCharge}
@@ -562,11 +574,13 @@ export default function BillingPage() {
                             <td className="px-4 py-3 text-sm text-gray-600">
                               {log.description || '-'}
                             </td>
-                            <td className={`px-4 py-3 text-right font-medium ${log.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                              {log.amount >= 0 ? '+' : ''}${log.amount.toFixed(2)}
+                            <td className={`px-4 py-3 text-right ${log.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                              <div className="font-medium">{log.amount >= 0 ? '+' : ''}${log.amount.toFixed(2)}</div>
+                              <div className="text-xs opacity-70">₩{formatKRW(Math.abs(log.amount))}</div>
                             </td>
                             <td className="px-4 py-3 text-right text-gray-600">
-                              ${log.balanceAfter.toFixed(2)}
+                              <div>${log.balanceAfter.toFixed(2)}</div>
+                              <div className="text-xs text-gray-400">₩{formatKRW(log.balanceAfter)}</div>
                             </td>
                           </tr>
                         );
@@ -599,9 +613,14 @@ export default function BillingPage() {
                         </div>
                       </div>
                       {model.pricePerUse > 0 ? (
-                        <span className="text-lg font-bold text-emerald-600">
-                          ${model.pricePerUse.toFixed(2)}
-                        </span>
+                        <div className="text-right">
+                          <div className="text-lg font-bold text-emerald-600">
+                            ₩{formatKRW(model.pricePerUse)}
+                          </div>
+                          <div className="text-xs text-gray-400">
+                            ${model.pricePerUse.toFixed(2)}
+                          </div>
+                        </div>
                       ) : (
                         <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
                           무료
