@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
 import { runAiModel } from '@/lib/fal-client';
+import { executeAutoCharge } from '@/app/api/billing/charge/route';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,7 +36,60 @@ export async function POST(
       return NextResponse.json({ error: '비활성화된 모델입니다' }, { status: 400 });
     }
 
-    // 3. API 키 확인 (모델별 키 또는 기본 환경변수 키)
+    // 3. 사용자 정보 및 크레딧 확인
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id as string },
+      select: {
+        id: true,
+        creditBalance: true,
+        autoRecharge: true,
+        rechargeThreshold: true,
+        rechargeAmount: true,
+        billingKey: true,
+        role: true,
+      },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: '사용자를 찾을 수 없습니다' }, { status: 404 });
+    }
+
+    const pricePerUse = aiModel.pricePerUse || 0;
+    let currentBalance = user.creditBalance;
+
+    // 4. 크레딧 확인 (무료 모델이 아닌 경우, ADMIN은 무료)
+    if (pricePerUse > 0 && user.role !== 'ADMIN') {
+      // 잔액 부족한 경우
+      if (currentBalance < pricePerUse) {
+        // 자동 충전 시도
+        if (user.autoRecharge && user.billingKey) {
+          const chargeResult = await executeAutoCharge(user.id);
+          if (chargeResult.success && chargeResult.newBalance !== undefined) {
+            currentBalance = chargeResult.newBalance;
+          } else {
+            return NextResponse.json(
+              {
+                error: '잔액이 부족합니다. 자동 충전에 실패했습니다.',
+                creditBalance: currentBalance,
+                pricePerUse,
+              },
+              { status: 402 } // Payment Required
+            );
+          }
+        } else {
+          return NextResponse.json(
+            {
+              error: `잔액이 부족합니다. 현재 잔액: $${currentBalance.toFixed(2)}, 필요 금액: $${pricePerUse.toFixed(2)}`,
+              creditBalance: currentBalance,
+              pricePerUse,
+            },
+            { status: 402 } // Payment Required
+          );
+        }
+      }
+    }
+
+    // 5. API 키 확인 (모델별 키 또는 기본 환경변수 키)
     const apiKey = aiModel.apiKey || process.env.FAL_KEY;
     if (!apiKey) {
       return NextResponse.json(
@@ -44,7 +98,7 @@ export async function POST(
       );
     }
 
-    // 4. 요청 파라미터 파싱
+    // 6. 요청 파라미터 파싱
     const body = await request.json();
     const { image_url, audio_url, ...otherParams } = body;
 
@@ -57,26 +111,57 @@ export async function POST(
       ...(audio_url && { audio_url }),
     };
 
-    // 5. 사용 로그 생성 (PROCESSING 상태)
+    // 7. 사용 로그 생성 (PROCESSING 상태)
     const usageLog = await prisma.aiUsageLog.create({
       data: {
-        userId: session.user.id as string,
+        userId: user.id,
         modelId: aiModel.id,
         inputParams,
         status: 'PROCESSING',
       },
     });
 
-    // 6. fal.ai API 호출 (모델별 API 키 사용)
+    // 8. fal.ai API 호출 (모델별 API 키 사용)
     const rawResult = await runAiModel(aiModel.modelId, inputParams, apiKey);
 
-    // 7. 결과 정규화 (일관된 형식으로 변환)
+    // 9. 결과 정규화 (일관된 형식으로 변환)
     const result = normalizeResult(rawResult);
 
-    // 8. 결과에서 출력 URL 추출
+    // 10. 결과에서 출력 URL 추출
     const outputUrl = extractOutputUrl(result);
 
-    // 9. 사용 로그 업데이트 (완료)
+    // 11. 크레딧 차감 (무료 모델이 아닌 경우, ADMIN은 제외)
+    let newBalance = currentBalance;
+    if (pricePerUse > 0 && user.role !== 'ADMIN') {
+      newBalance = currentBalance - pricePerUse;
+
+      await prisma.$transaction([
+        // 잔액 차감
+        prisma.user.update({
+          where: { id: user.id },
+          data: { creditBalance: newBalance },
+        }),
+        // 크레딧 로그 생성
+        prisma.creditLog.create({
+          data: {
+            userId: user.id,
+            amount: -pricePerUse,
+            type: 'USAGE',
+            description: `${aiModel.name} 사용`,
+            aiUsageLogId: usageLog.id,
+            balanceAfter: newBalance,
+          },
+        }),
+      ]);
+
+      // 임계값 이하로 떨어지면 자동 충전 예약 (비동기로 실행)
+      if (user.autoRecharge && newBalance < user.rechargeThreshold) {
+        // 백그라운드에서 자동 충전 실행 (결과 기다리지 않음)
+        executeAutoCharge(user.id).catch(console.error);
+      }
+    }
+
+    // 12. 사용 로그 업데이트 (완료)
     await prisma.aiUsageLog.update({
       where: { id: usageLog.id },
       data: {
@@ -90,6 +175,8 @@ export async function POST(
       success: true,
       result,
       usageId: usageLog.id,
+      creditBalance: newBalance,
+      charged: pricePerUse,
     });
 
   } catch (error) {
