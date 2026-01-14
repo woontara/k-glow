@@ -639,6 +639,80 @@ export default function BillingPage() {
             </div>
           )}
         </div>
+
+        {/* 환불/취소 정책 */}
+        <div className="mt-8 bg-white/80 backdrop-blur-sm rounded-2xl border border-gray-200 overflow-hidden">
+          <div className="p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              결제 및 환불 정책
+            </h3>
+
+            <div className="space-y-4">
+              {/* 환불 정책 */}
+              <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl">
+                <h4 className="font-medium text-blue-900 mb-2 flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                  </svg>
+                  환불 정책
+                </h4>
+                <ul className="text-sm text-blue-800 space-y-1">
+                  <li>• 충전 후 <strong>7일 이내</strong>, 미사용 크레딧에 한해 전액 환불 가능</li>
+                  <li>• 일부 사용한 경우, 남은 크레딧 금액에서 수수료(10%)를 제외하고 환불</li>
+                  <li>• 환불 요청은 고객센터 또는 이메일로 접수해주세요</li>
+                  <li>• 환불 처리는 영업일 기준 3~5일 소요됩니다</li>
+                </ul>
+              </div>
+
+              {/* 취소 규정 */}
+              <div className="p-4 bg-amber-50 border border-amber-100 rounded-xl">
+                <h4 className="font-medium text-amber-900 mb-2 flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  취소 규정
+                </h4>
+                <ul className="text-sm text-amber-800 space-y-1">
+                  <li>• 결제 완료 후 <strong>24시간 이내</strong> 취소 시 전액 환불</li>
+                  <li>• 자동 충전의 경우, 충전 직후 미사용 시 24시간 내 취소 가능</li>
+                  <li>• 이미 사용된 크레딧은 취소가 불가합니다</li>
+                </ul>
+              </div>
+
+              {/* 교환 정책 */}
+              <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl">
+                <h4 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                  </svg>
+                  교환 정책
+                </h4>
+                <ul className="text-sm text-gray-700 space-y-1">
+                  <li>• 크레딧은 디지털 상품으로 다른 상품과 교환이 불가합니다</li>
+                  <li>• 타 계정으로의 크레딧 이전은 지원하지 않습니다</li>
+                </ul>
+              </div>
+
+              {/* 유의사항 */}
+              <div className="p-4 bg-red-50 border border-red-100 rounded-xl">
+                <h4 className="font-medium text-red-900 mb-2 flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  유의사항
+                </h4>
+                <ul className="text-sm text-red-800 space-y-1">
+                  <li>• 크레딧의 유효기간은 충전일로부터 <strong>1년</strong>입니다</li>
+                  <li>• 부정 사용이 확인될 경우 환불 없이 계정이 정지될 수 있습니다</li>
+                  <li>• 자세한 문의: <a href="mailto:support@k-glow.kr" className="underline hover:text-red-900">support@k-glow.kr</a></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
