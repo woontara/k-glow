@@ -58,6 +58,31 @@ export default function Footer() {
             </ul>
           </div>
         </div>
+
+        {/* 사업자 정보 */}
+        <div className="mt-8 pt-6 border-t border-gray-200">
+          <div className="text-xs text-gray-500 space-y-1">
+            <p>
+              <span className="font-medium text-gray-700">케이글로우 (K-Glow)</span>
+              <span className="mx-2">|</span>
+              대표자명 : 양희웅
+              <span className="mx-2">|</span>
+              사업자등록번호 : 538-15-02695
+              <span className="mx-2">|</span>
+              통신판매신고번호 : 2025-경기의왕-0085
+            </p>
+            <p>
+              대표메일 : <a href="mailto:contact@k-glow.com" className="hover:text-blue-600">contact@k-glow.com</a>
+              <span className="mx-2">|</span>
+              마케팅/제휴문의 : <a href="mailto:contact@k-glow.com" className="hover:text-blue-600">contact@k-glow.com</a>
+              <span className="mx-2">|</span>
+              개인정보보호책임자 : 양희웅
+            </p>
+            <p>
+              주소 : 경기도 의왕시 오전로 150, 103-1904
+            </p>
+          </div>
+        </div>
       </div>
     </footer>
   );
