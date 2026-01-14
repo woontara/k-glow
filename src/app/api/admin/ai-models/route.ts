@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, nameEn, modelId, category, description, iconUrl, apiKey, defaultParams, isActive, order } = body;
+    const { name, nameEn, modelId, category, description, iconUrl, apiKey, defaultParams, pricePerUse, isActive, order } = body;
 
     if (!name || !nameEn || !modelId || !category) {
       return NextResponse.json(
@@ -77,6 +77,7 @@ export async function POST(request: NextRequest) {
         iconUrl,
         apiKey,
         defaultParams: defaultParams || {},
+        pricePerUse: pricePerUse ?? 0,
         isActive: isActive ?? true,
         order: order ?? 0,
       },

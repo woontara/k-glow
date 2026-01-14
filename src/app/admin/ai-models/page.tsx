@@ -15,6 +15,7 @@ interface AiModel {
   iconUrl: string | null;
   apiKey: string | null;
   defaultParams: Record<string, unknown> | null;
+  pricePerUse: number;
   isActive: boolean;
   order: number;
   createdAt: string;
@@ -32,6 +33,7 @@ interface AiModelFormData {
   iconUrl: string;
   apiKey: string;
   defaultParams: string;
+  pricePerUse: number;
   isActive: boolean;
   order: number;
 }
@@ -45,6 +47,7 @@ const initialFormData: AiModelFormData = {
   iconUrl: '',
   apiKey: '',
   defaultParams: '{}',
+  pricePerUse: 0,
   isActive: true,
   order: 0,
 };
@@ -186,6 +189,7 @@ export default function AiModelsManagementPage() {
       iconUrl: model.iconUrl || '',
       apiKey: model.apiKey || '',
       defaultParams: JSON.stringify(model.defaultParams || {}, null, 2),
+      pricePerUse: model.pricePerUse || 0,
       isActive: model.isActive,
       order: model.order,
     });
@@ -382,9 +386,9 @@ export default function AiModelsManagementPage() {
                 <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">모델</th>
                 <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">모델 ID</th>
                 <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">카테고리</th>
+                <th className="px-6 py-4 text-right text-sm font-medium text-gray-500">가격</th>
                 <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">사용량</th>
                 <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">상태</th>
-                <th className="px-6 py-4 text-left text-sm font-medium text-gray-500">등록일</th>
                 <th className="px-6 py-4 text-right text-sm font-medium text-gray-500">관리</th>
               </tr>
             </thead>
@@ -412,6 +416,13 @@ export default function AiModelsManagementPage() {
                       {categoryLabels[model.category]?.icon} {categoryLabels[model.category]?.label || model.category}
                     </span>
                   </td>
+                  <td className="px-6 py-4 text-right">
+                    {model.pricePerUse > 0 ? (
+                      <span className="font-medium text-emerald-600">${model.pricePerUse.toFixed(2)}</span>
+                    ) : (
+                      <span className="text-gray-400 text-sm">무료</span>
+                    )}
+                  </td>
                   <td className="px-6 py-4">
                     <span className="inline-flex items-center gap-1 text-sm">
                       <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -431,9 +442,6 @@ export default function AiModelsManagementPage() {
                     >
                       {model.isActive ? '활성' : '비활성'}
                     </button>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-500">
-                    {formatDate(model.createdAt)}
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
@@ -587,21 +595,43 @@ export default function AiModelsManagementPage() {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  API 키 <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="password"
-                  value={formData.apiKey}
-                  onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8BA4B4] focus:border-transparent font-mono text-sm"
-                  placeholder="fal.ai API 키를 입력하세요"
-                  autoComplete="off"
-                />
-                <p className="mt-1 text-xs text-gray-500">
-                  모델별로 다른 API 키를 사용할 수 있습니다
-                </p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    API 키
+                  </label>
+                  <input
+                    type="password"
+                    value={formData.apiKey}
+                    onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8BA4B4] focus:border-transparent font-mono text-sm"
+                    placeholder="fal.ai API 키"
+                    autoComplete="off"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    비워두면 기본 키 사용
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    사용 가격 (USD)
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formData.pricePerUse}
+                      onChange={(e) => setFormData({ ...formData, pricePerUse: parseFloat(e.target.value) || 0 })}
+                      className="w-full px-3 py-2 pl-7 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#8BA4B4] focus:border-transparent"
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <p className="mt-1 text-xs text-gray-500">
+                    0 = 무료
+                  </p>
+                </div>
               </div>
 
               <div>

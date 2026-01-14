@@ -59,7 +59,7 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json();
-    const { name, nameEn, modelId, category, description, iconUrl, apiKey, defaultParams, isActive, order } = body;
+    const { name, nameEn, modelId, category, description, iconUrl, apiKey, defaultParams, pricePerUse, isActive, order } = body;
 
     // 기존 모델 확인
     const existingModel = await prisma.aiModel.findUnique({
@@ -98,6 +98,7 @@ export async function PUT(
         iconUrl,
         apiKey: apiKey !== undefined ? apiKey : existingModel.apiKey,
         defaultParams: defaultParams || existingModel.defaultParams,
+        pricePerUse: pricePerUse !== undefined ? pricePerUse : existingModel.pricePerUse,
         isActive,
         order,
       },

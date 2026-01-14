@@ -32,6 +32,7 @@ interface AiModel {
   description: string | null;
   iconUrl: string | null;
   defaultParams: Record<string, unknown> | null;
+  pricePerUse: number;
 }
 
 interface ProcessingResult {
@@ -457,9 +458,20 @@ export default function AiToolsPage() {
                     <div className={`w-14 h-14 bg-gradient-to-br ${config.gradient} rounded-xl flex items-center justify-center text-3xl mb-4 group-hover:scale-110 transition-transform`}>
                       {config.icon}
                     </div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                      {model.name}
-                    </h3>
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-xl font-semibold text-gray-900">
+                        {model.name}
+                      </h3>
+                      {model.pricePerUse > 0 ? (
+                        <span className="px-2 py-1 bg-emerald-100 text-emerald-700 text-sm font-medium rounded-lg">
+                          ${model.pricePerUse.toFixed(2)}
+                        </span>
+                      ) : (
+                        <span className="px-2 py-1 bg-gray-100 text-gray-600 text-sm font-medium rounded-lg">
+                          무료
+                        </span>
+                      )}
+                    </div>
                     <p className="text-sm text-gray-500 mb-3">
                       {model.nameEn}
                     </p>

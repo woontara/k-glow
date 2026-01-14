@@ -27,6 +27,7 @@ export async function GET() {
         description: true,
         iconUrl: true,
         defaultParams: true,
+        pricePerUse: true,
       },
     });
 
