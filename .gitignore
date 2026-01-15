@@ -43,6 +43,11 @@ next-env.d.ts
 
 # test files & screenshots
 *.png
+!src/app/icon.png
+!src/app/apple-icon.png
+!src/app/favicon.png
+!public/logo.png
+!public/k-icon.png
 *.log
 test-*.json
 test-*.ts
