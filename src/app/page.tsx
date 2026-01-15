@@ -259,7 +259,7 @@ function PremiumCard({
             ${gradient}
             shadow-lg
             transition-transform duration-500
-            group-hover:scale-110 group-hover:rotate-3
+            group-hover:scale-110 
           `}>
             <div className="text-white">{icon}</div>
           </div>

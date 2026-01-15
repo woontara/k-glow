@@ -177,7 +177,7 @@ export default function AboutPage() {
                 className={`card-luxury rounded-[2rem] p-8 text-center group ${mounted ? 'animate-reveal' : 'opacity-0'}`}
                 style={{ animationDelay: `${(i + 5) * 100}ms` }}
               >
-                <div className={`w-20 h-20 bg-gradient-to-br ${value.gradient} rounded-3xl flex items-center justify-center text-white mx-auto mb-6 shadow-lg transition-all duration-500 group-hover:scale-110 group-hover:rotate-3`}>
+                <div className={`w-20 h-20 bg-gradient-to-br ${value.gradient} rounded-3xl flex items-center justify-center text-white mx-auto mb-6 shadow-lg transition-all duration-500 group-hover:scale-110 `}>
                   {value.icon}
                 </div>
                 <span className="text-xs font-medium text-[#8BA4B4] tracking-[0.15em] uppercase">

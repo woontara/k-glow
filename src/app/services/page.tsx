@@ -152,7 +152,7 @@ export default function ServicesPage() {
                 style={{ animationDelay: `${(i + 3) * 100}ms` }}
               >
                 {/* Icon */}
-                <div className={`w-18 h-18 bg-gradient-to-br ${service.gradient} rounded-2xl p-4 flex items-center justify-center text-white mb-6 shadow-lg transition-all duration-500 group-hover:scale-110 group-hover:rotate-3`}>
+                <div className={`w-18 h-18 bg-gradient-to-br ${service.gradient} rounded-2xl p-4 flex items-center justify-center text-white mb-6 shadow-lg transition-all duration-500 group-hover:scale-110 `}>
                   {service.icon}
                 </div>
 
