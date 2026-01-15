@@ -36,10 +36,11 @@ async function getBrandInfoFromGemini(brandName: string): Promise<{
   "history": "브랜드 설립 연도와 간략한 역사 (2-3문장)",
   "philosophy": "브랜드 철학과 핵심 가치 (2-3문장)",
   "targetAudience": "주요 타겟 고객층",
-  "popularProducts": ["대표 제품 1", "대표 제품 2", "대표 제품 3"],
+  "popularProducts": ["제품명1", "제품명2", ... 최대 20개까지 브랜드의 대표 제품/인기 제품 나열],
   "uniqueFeatures": ["차별화 포인트 1", "차별화 포인트 2", "차별화 포인트 3"]
 }
 
+주의: popularProducts에는 해당 브랜드가 실제로 판매하는 주요 제품들을 최대한 많이 (최대 20개) 나열해주세요.
 해당 브랜드를 모르면 null을 반환하세요.
 JSON만 출력:`;
 
@@ -198,8 +199,8 @@ ${allContent.substring(0, 6000)}
 주의사항:
 - 실제 판매 제품만 추출 (브랜드명, 회사명 제외)
 - 가격이 없으면 "0"으로 표시
-- 최대 15개 제품 추출 (가능한 모든 제품)
-- 제품명은 정확하게 (예: "어노브 딥 데미지 트리트먼트 헤어팩")
+- 최대 30개 제품 추출 (발견된 모든 제품)
+- 제품명은 풀네임으로 정확하게 (예: "AGE-R 부스터 프로", "레드 아크네 클리어 수딩 크림")
 
 JSON 배열만 출력하세요:`;
 
@@ -228,14 +229,25 @@ JSON 배열만 출력하세요:`;
     const jsonMatch = text.match(/\[[\s\S]*\]/);
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]);
-      return parsed.map((p: any, idx: number) => ({
-        name: p.name || `제품 ${idx + 1}`,
-        price: p.price || '0',
-        category: p.category || '스킨케어',
-        description: p.description || '',
-        images: allImages.slice(idx, idx + 1),
-        ingredients: [],
-      }));
+      return parsed.map((p: any, idx: number) => {
+        // 제품명 키워드로 이미지 매칭 시도
+        const productNameLower = (p.name || '').toLowerCase().replace(/\s+/g, '');
+        const matchedImage = allImages.find(img => {
+          const imgLower = img.toLowerCase();
+          // 제품명의 일부가 이미지 URL에 포함되어 있는지 확인
+          const nameWords = productNameLower.split(/[-_]/);
+          return nameWords.some((word: string) => word.length > 3 && imgLower.includes(word));
+        });
+
+        return {
+          name: p.name || `제품 ${idx + 1}`,
+          price: p.price || '0',
+          category: p.category || '스킨케어',
+          description: p.description || '',
+          images: matchedImage ? [matchedImage] : [], // 매칭된 이미지만 사용, 없으면 빈 배열
+          ingredients: [],
+        };
+      });
     }
   } catch (error) {
     console.error('AI 제품 추출 실패:', error);
@@ -283,11 +295,17 @@ export async function analyzeBrandWebsite(input: AnalyzerInput): Promise<Analyze
   console.log('📦 AI 제품 분석 중...');
   let products = await extractProductsWithAI(allPages, input.websiteUrl);
 
-  // Gemini 대표 제품 추가 (크롤링에서 못 찾은 경우)
-  if (geminiInfo?.popularProducts && products.length < 5) {
+  // Gemini 대표 제품 추가 (중복 제외하고 항상 추가)
+  if (geminiInfo?.popularProducts && geminiInfo.popularProducts.length > 0) {
+    console.log(`📦 Gemini 제품 ${geminiInfo.popularProducts.length}개 병합 중...`);
     const existingNames = products.map(p => p.name.toLowerCase());
     for (const popularProduct of geminiInfo.popularProducts) {
-      if (!existingNames.some(n => n.includes(popularProduct.toLowerCase()))) {
+      const popularLower = popularProduct.toLowerCase();
+      // 이미 존재하는 제품인지 확인 (부분 매칭)
+      const isDuplicate = existingNames.some(n =>
+        n.includes(popularLower) || popularLower.includes(n)
+      );
+      if (!isDuplicate) {
         products.push({
           name: popularProduct,
           price: '0',
@@ -296,8 +314,10 @@ export async function analyzeBrandWebsite(input: AnalyzerInput): Promise<Analyze
           images: [],
           ingredients: [],
         });
+        existingNames.push(popularLower); // 중복 방지를 위해 추가
       }
     }
+    console.log(`📦 총 제품 수: ${products.length}개`);
   }
 
   // 5. 번역 (모든 제품 - 빠른 번역 모드)
