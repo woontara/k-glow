@@ -1,8 +1,7 @@
-// 브랜드 및 제품 분석 유틸리티
+// 브랜드 및 제품 분석 유틸리티 - Claude AI 기반
 import {
   crawlWebsite,
-  filterProductPages,
-  extractProductInfo,
+  crawlPage,
   type CrawledPage,
   type ProductInfo,
 } from '@/lib/crawler';
@@ -14,48 +13,209 @@ import {
 import type { AnalyzerInput, AnalyzerOutput, ProductAnalysis, BrandAnalysis } from '@/types';
 
 /**
- * 브랜드 웹사이트 전체 분석
+ * Claude AI로 브랜드 정보 추출
+ */
+async function extractBrandInfoWithAI(page: CrawledPage, websiteUrl: string): Promise<{
+  name: string;
+  description: string;
+  logoUrl: string;
+  strengths: string[];
+}> {
+  const apiKey = process.env.CLAUDE_API_KEY;
+
+  if (!apiKey) {
+    console.warn('CLAUDE_API_KEY 없음 - 기본 추출 사용');
+    return {
+      name: new URL(websiteUrl).hostname.replace('www.', '').split('.')[0],
+      description: '한국 화장품 브랜드',
+      logoUrl: page.images[0] || '',
+      strengths: ['K-뷰티 브랜드'],
+    };
+  }
+
+  try {
+    const prompt = `다음은 화장품 브랜드 웹사이트의 메인 페이지 정보입니다.
+
+URL: ${websiteUrl}
+페이지 제목: ${page.title}
+페이지 내용 (일부):
+${page.content.substring(0, 3000)}
+
+위 정보를 분석하여 다음 JSON 형식으로 브랜드 정보를 추출해주세요:
+{
+  "name": "브랜드명 (한글 또는 영문)",
+  "description": "브랜드 소개 (2-3문장, 브랜드의 특징과 철학)",
+  "strengths": ["강점1", "강점2", "강점3"]
+}
+
+주의사항:
+- 브랜드명은 정확히 추출 (예: 어노브, 이니스프리, 닥터자르트 등)
+- 설명은 마케팅 문구가 아닌 실제 브랜드 특징 요약
+- 강점은 제품 특징, 성분 철학, 타겟 고객 등 기반
+
+JSON만 출력하세요:`;
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1024,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Claude API 오류: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const text = data.content[0].text.trim();
+
+    // JSON 파싱
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      return {
+        name: parsed.name || '브랜드명',
+        description: parsed.description || '한국 화장품 브랜드',
+        logoUrl: page.images.find(img => img.includes('logo')) || page.images[0] || '',
+        strengths: parsed.strengths || ['K-뷰티 브랜드'],
+      };
+    }
+  } catch (error) {
+    console.error('AI 브랜드 추출 실패:', error);
+  }
+
+  return {
+    name: page.title.split(/[-|–]/)[0].trim() || '브랜드명',
+    description: '한국 화장품 브랜드',
+    logoUrl: page.images[0] || '',
+    strengths: ['K-뷰티 브랜드'],
+  };
+}
+
+/**
+ * Claude AI로 제품 목록 추출
+ */
+async function extractProductsWithAI(pages: CrawledPage[], websiteUrl: string): Promise<ProductInfo[]> {
+  const apiKey = process.env.CLAUDE_API_KEY;
+
+  if (!apiKey) {
+    console.warn('CLAUDE_API_KEY 없음 - 제품 추출 스킵');
+    return [];
+  }
+
+  // 모든 페이지 콘텐츠 합치기
+  const allContent = pages.map(p => `[${p.url}]\n제목: ${p.title}\n내용: ${p.content.substring(0, 1500)}`).join('\n\n---\n\n');
+  const allImages = pages.flatMap(p => p.images).filter(img =>
+    img.includes('product') || img.includes('item') || img.includes('goods') ||
+    img.includes('thumb') || img.includes('상품') || img.includes('.jpg') || img.includes('.png')
+  );
+
+  try {
+    const prompt = `다음은 화장품 브랜드 웹사이트에서 크롤링한 페이지들입니다.
+
+${allContent.substring(0, 6000)}
+
+위 내용에서 화장품 제품 정보를 추출해주세요. 다음 JSON 배열 형식으로 출력:
+[
+  {
+    "name": "제품명 (풀네임)",
+    "price": "가격 (원화, 숫자만)",
+    "category": "카테고리 (스킨케어/메이크업/헤어케어/바디케어 중 하나)",
+    "description": "제품 설명 (1-2문장)"
+  }
+]
+
+주의사항:
+- 실제 판매 제품만 추출 (브랜드명, 회사명 제외)
+- 가격이 없으면 "0"으로 표시
+- 최대 5개 제품만 추출
+- 제품명은 정확하게 (예: "어노브 딥 데미지 트리트먼트 헤어팩")
+
+JSON 배열만 출력하세요:`;
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2048,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Claude API 오류: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const text = data.content[0].text.trim();
+
+    // JSON 배열 파싱
+    const jsonMatch = text.match(/\[[\s\S]*\]/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      return parsed.map((p: any, idx: number) => ({
+        name: p.name || `제품 ${idx + 1}`,
+        price: p.price || '0',
+        category: p.category || '스킨케어',
+        description: p.description || '',
+        images: allImages.slice(idx, idx + 1),
+        ingredients: [],
+      }));
+    }
+  } catch (error) {
+    console.error('AI 제품 추출 실패:', error);
+  }
+
+  return [];
+}
+
+/**
+ * 브랜드 웹사이트 전체 분석 (Claude AI 기반)
  */
 export async function analyzeBrandWebsite(input: AnalyzerInput): Promise<AnalyzerOutput> {
   console.log('🔍 브랜드 분석 시작:', input.websiteUrl);
 
-  // 1. 웹사이트 크롤링 (Vercel 타임아웃 대응: 5페이지, 깊이 1로 제한)
+  // 1. 웹사이트 크롤링 (5페이지, 깊이 1)
   console.log('📡 웹사이트 크롤링 중...');
-  const allPages = await crawlWebsite(input.websiteUrl, 5, Math.min(input.maxDepth || 1, 1));
+  const allPages = await crawlWebsite(input.websiteUrl, 5, 1);
 
   if (allPages.length === 0) {
-    throw new Error('웹사이트 크롤링 실패');
+    throw new Error('웹사이트에 접근할 수 없습니다. URL을 확인해주세요.');
   }
 
-  // 2. 제품 페이지 필터링
-  console.log('🔎 제품 페이지 필터링 중...');
-  const productPages = filterProductPages(allPages);
+  // 2. Claude AI로 브랜드 정보 추출
+  console.log('🏢 AI 브랜드 분석 중...');
+  const brandInfo = await extractBrandInfoWithAI(allPages[0], input.websiteUrl);
 
-  if (productPages.length === 0) {
-    console.warn('제품 페이지를 찾을 수 없습니다. 전체 페이지에서 분석합니다.');
-  }
+  // 3. Claude AI로 제품 정보 추출
+  console.log('📦 AI 제품 분석 중...');
+  const products = await extractProductsWithAI(allPages, input.websiteUrl);
 
-  // 3. 제품 정보 추출
-  console.log('📦 제품 정보 추출 중...');
-  const products = productPages.map((page) => extractProductInfo(page));
-
-  // 4. 브랜드 정보 추출
-  console.log('🏢 브랜드 정보 추출 중...');
-  const brandInfo = extractBrandInfo(allPages[0], products);
-
-  // 5. 번역 (제품별로) - Vercel 타임아웃 대응: 최대 3개로 제한
+  // 4. 번역 (최대 3개 제품)
   console.log('🌐 러시아어 번역 중...');
   const translatedProducts = await translateProducts(products.slice(0, 3));
 
-  // 6. 브랜드 번역
+  // 5. 브랜드 번역
   const brandNameRu = await translateProductName(brandInfo.name);
   const brandDescRu = await translateProductDescription(brandInfo.description);
 
-  // 7. 시장 분석
+  // 6. 시장 분석
   console.log('📊 시장 분석 중...');
   const analysis = analyzeMarketPotential(translatedProducts);
 
-  // 8. 결과 조합
+  // 7. 결과 조합
   const brand: BrandAnalysis = {
     name: brandInfo.name,
     nameRu: brandNameRu,
@@ -64,11 +224,12 @@ export async function analyzeBrandWebsite(input: AnalyzerInput): Promise<Analyze
     logoUrl: brandInfo.logoUrl,
     marketScore: analysis.marketScore,
     strengths: brandInfo.strengths,
-    strengthsRu: brandInfo.strengths, // TODO: 번역
+    strengthsRu: brandInfo.strengths,
   };
 
-  const uniqueCategories = products.map((p) => p.category).filter((c): c is string => !!c);
-  const categories = Array.from(new Set(uniqueCategories));
+  const categories = [...new Set(products.map(p => p.category).filter(Boolean))] as string[];
+
+  console.log('✅ 분석 완료');
 
   return {
     brand,
@@ -77,7 +238,7 @@ export async function analyzeBrandWebsite(input: AnalyzerInput): Promise<Analyze
       totalProducts: products.length,
       categories,
       priceRange: calculatePriceRange(products),
-      keyIngredients: extractKeyIngredients(products),
+      keyIngredients: [],
       competitiveAdvantage: analysis.competitiveAdvantage,
       recommendedProducts: analysis.recommendedProducts,
     },
