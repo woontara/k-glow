@@ -321,16 +321,6 @@ export default function Home() {
   return (
     <>
       <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Pretendard:wght@300;400;500;600;700&display=swap');
-
-        .font-display {
-          font-family: 'Playfair Display', serif;
-        }
-
-        .font-body {
-          font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
-        }
-
         @keyframes liquid {
           0%, 100% {
             border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
@@ -786,29 +776,6 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Footer */}
-        <footer className="py-16 px-6 border-t border-[#E8E2D9]/50">
-          <div className="max-w-6xl mx-auto">
-            <div className="flex flex-col items-center gap-6">
-              <Image
-                src="/logo.png"
-                alt="K-Glow"
-                width={120}
-                height={42}
-                className="opacity-60 hover:opacity-100 transition-opacity"
-                unoptimized
-              />
-              <p className="text-[#B2BEC3] text-sm text-center">
-                © 2024 K-Glow. Premium K-Beauty Export Platform
-              </p>
-              <div className="flex gap-6 text-sm text-[#8BA4B4]">
-                <Link href="/partners" className="hover:text-[#5A7A8A] transition-colors">파트너사</Link>
-                <Link href="/calculator" className="hover:text-[#5A7A8A] transition-colors">견적 계산</Link>
-                <Link href="/analyze" className="hover:text-[#5A7A8A] transition-colors">브랜드 분석</Link>
-              </div>
-            </div>
-          </div>
-        </footer>
       </main>
     </>
   );
