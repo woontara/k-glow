@@ -96,8 +96,8 @@ export async function batchTranslate(
     });
     results.push(result.translated);
 
-    // Rate limiting (Claude API는 분당 요청 수 제한)
-    await sleep(500);
+    // Rate limiting (200ms - Vercel 타임아웃 대응)
+    await sleep(200);
   }
 
   return results;

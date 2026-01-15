@@ -168,8 +168,8 @@ export async function crawlWebsite(
         }
       }
 
-      // Rate limiting (1초 대기)
-      await sleep(1000);
+      // Rate limiting (300ms 대기 - Vercel 타임아웃 대응)
+      await sleep(300);
     } catch (error) {
       console.error(`크롤링 실패: ${url}`, error);
     }

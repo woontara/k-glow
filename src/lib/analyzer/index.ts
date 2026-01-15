@@ -19,9 +19,9 @@ import type { AnalyzerInput, AnalyzerOutput, ProductAnalysis, BrandAnalysis } fr
 export async function analyzeBrandWebsite(input: AnalyzerInput): Promise<AnalyzerOutput> {
   console.log('🔍 브랜드 분석 시작:', input.websiteUrl);
 
-  // 1. 웹사이트 크롤링
+  // 1. 웹사이트 크롤링 (Vercel 타임아웃 대응: 5페이지, 깊이 1로 제한)
   console.log('📡 웹사이트 크롤링 중...');
-  const allPages = await crawlWebsite(input.websiteUrl, 30, input.maxDepth || 3);
+  const allPages = await crawlWebsite(input.websiteUrl, 5, Math.min(input.maxDepth || 1, 1));
 
   if (allPages.length === 0) {
     throw new Error('웹사이트 크롤링 실패');
@@ -43,9 +43,9 @@ export async function analyzeBrandWebsite(input: AnalyzerInput): Promise<Analyze
   console.log('🏢 브랜드 정보 추출 중...');
   const brandInfo = extractBrandInfo(allPages[0], products);
 
-  // 5. 번역 (제품별로)
+  // 5. 번역 (제품별로) - Vercel 타임아웃 대응: 최대 3개로 제한
   console.log('🌐 러시아어 번역 중...');
-  const translatedProducts = await translateProducts(products.slice(0, 10)); // 최대 10개
+  const translatedProducts = await translateProducts(products.slice(0, 3));
 
   // 6. 브랜드 번역
   const brandNameRu = await translateProductName(brandInfo.name);
