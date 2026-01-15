@@ -13,6 +13,69 @@ import {
 import type { AnalyzerInput, AnalyzerOutput, ProductAnalysis, BrandAnalysis } from '@/types';
 
 /**
+ * Gemini API로 브랜드 2차 정보 수집
+ */
+async function getBrandInfoFromGemini(brandName: string): Promise<{
+  history: string;
+  philosophy: string;
+  targetAudience: string;
+  popularProducts: string[];
+  uniqueFeatures: string[];
+} | null> {
+  const apiKey = process.env.GEMINI_API_KEY;
+
+  if (!apiKey) {
+    console.warn('GEMINI_API_KEY 없음 - 2차 정보 수집 스킵');
+    return null;
+  }
+
+  try {
+    const prompt = `한국 화장품 브랜드 "${brandName}"에 대해 다음 정보를 JSON 형식으로 알려주세요:
+
+{
+  "history": "브랜드 설립 연도와 간략한 역사 (2-3문장)",
+  "philosophy": "브랜드 철학과 핵심 가치 (2-3문장)",
+  "targetAudience": "주요 타겟 고객층",
+  "popularProducts": ["대표 제품 1", "대표 제품 2", "대표 제품 3"],
+  "uniqueFeatures": ["차별화 포인트 1", "차별화 포인트 2", "차별화 포인트 3"]
+}
+
+해당 브랜드를 모르면 null을 반환하세요.
+JSON만 출력:`;
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      console.error('Gemini API 오류:', response.status);
+      return null;
+    }
+
+    const data = await response.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+
+    if (!text || text === 'null') return null;
+
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0]);
+    }
+  } catch (error) {
+    console.error('Gemini 브랜드 정보 수집 실패:', error);
+  }
+
+  return null;
+}
+
+/**
  * Claude AI로 브랜드 정보 추출
  */
 async function extractBrandInfoWithAI(page: CrawledPage, websiteUrl: string): Promise<{
@@ -195,15 +258,49 @@ export async function analyzeBrandWebsite(input: AnalyzerInput): Promise<Analyze
     throw new Error('웹사이트에 접근할 수 없습니다. URL을 확인해주세요.');
   }
 
-  // 2. Claude AI로 브랜드 정보 추출
-  console.log('🏢 AI 브랜드 분석 중...');
+  // 2. Claude AI로 브랜드 정보 추출 (1차 - 웹사이트 기반)
+  console.log('🏢 AI 브랜드 분석 중 (1차: 웹사이트)...');
   const brandInfo = await extractBrandInfoWithAI(allPages[0], input.websiteUrl);
 
-  // 3. Claude AI로 제품 정보 추출
-  console.log('📦 AI 제품 분석 중...');
-  const products = await extractProductsWithAI(allPages, input.websiteUrl);
+  // 3. Gemini로 브랜드 2차 정보 수집 (외부 지식 기반)
+  console.log('🔍 브랜드 2차 정보 수집 중 (Gemini)...');
+  const geminiInfo = await getBrandInfoFromGemini(brandInfo.name);
 
-  // 4. 번역 (모든 제품 - 빠른 번역 모드)
+  // 브랜드 정보 취합 (1차 + 2차)
+  if (geminiInfo) {
+    console.log('✅ Gemini 2차 정보 수집 성공');
+    // 설명에 역사와 철학 추가
+    if (geminiInfo.history || geminiInfo.philosophy) {
+      brandInfo.description = `${brandInfo.description}\n\n${geminiInfo.history || ''} ${geminiInfo.philosophy || ''}`.trim();
+    }
+    // 강점에 차별화 포인트 추가
+    if (geminiInfo.uniqueFeatures && geminiInfo.uniqueFeatures.length > 0) {
+      brandInfo.strengths = [...new Set([...brandInfo.strengths, ...geminiInfo.uniqueFeatures])];
+    }
+  }
+
+  // 4. Claude AI로 제품 정보 추출
+  console.log('📦 AI 제품 분석 중...');
+  let products = await extractProductsWithAI(allPages, input.websiteUrl);
+
+  // Gemini 대표 제품 추가 (크롤링에서 못 찾은 경우)
+  if (geminiInfo?.popularProducts && products.length < 5) {
+    const existingNames = products.map(p => p.name.toLowerCase());
+    for (const popularProduct of geminiInfo.popularProducts) {
+      if (!existingNames.some(n => n.includes(popularProduct.toLowerCase()))) {
+        products.push({
+          name: popularProduct,
+          price: '0',
+          category: '스킨케어',
+          description: `${brandInfo.name}의 대표 제품`,
+          images: [],
+          ingredients: [],
+        });
+      }
+    }
+  }
+
+  // 5. 번역 (모든 제품 - 빠른 번역 모드)
   console.log('🌐 러시아어 번역 중...');
   const translatedProducts = await translateProductsFast(products);
 
