@@ -135,7 +135,7 @@ ${allContent.substring(0, 6000)}
 주의사항:
 - 실제 판매 제품만 추출 (브랜드명, 회사명 제외)
 - 가격이 없으면 "0"으로 표시
-- 최대 5개 제품만 추출
+- 최대 15개 제품 추출 (가능한 모든 제품)
 - 제품명은 정확하게 (예: "어노브 딥 데미지 트리트먼트 헤어팩")
 
 JSON 배열만 출력하세요:`;
@@ -187,9 +187,9 @@ JSON 배열만 출력하세요:`;
 export async function analyzeBrandWebsite(input: AnalyzerInput): Promise<AnalyzerOutput> {
   console.log('🔍 브랜드 분석 시작:', input.websiteUrl);
 
-  // 1. 웹사이트 크롤링 (5페이지, 깊이 1)
+  // 1. 웹사이트 크롤링 (10페이지, 깊이 2로 더 많은 제품 페이지 수집)
   console.log('📡 웹사이트 크롤링 중...');
-  const allPages = await crawlWebsite(input.websiteUrl, 5, 1);
+  const allPages = await crawlWebsite(input.websiteUrl, 10, 2);
 
   if (allPages.length === 0) {
     throw new Error('웹사이트에 접근할 수 없습니다. URL을 확인해주세요.');
@@ -203,9 +203,9 @@ export async function analyzeBrandWebsite(input: AnalyzerInput): Promise<Analyze
   console.log('📦 AI 제품 분석 중...');
   const products = await extractProductsWithAI(allPages, input.websiteUrl);
 
-  // 4. 번역 (최대 3개 제품)
+  // 4. 번역 (모든 제품 - 빠른 번역 모드)
   console.log('🌐 러시아어 번역 중...');
-  const translatedProducts = await translateProducts(products.slice(0, 3));
+  const translatedProducts = await translateProductsFast(products);
 
   // 5. 브랜드 번역
   const brandNameRu = await translateProductName(brandInfo.name);
@@ -278,7 +278,107 @@ function extractBrandInfo(
 }
 
 /**
- * 제품 번역
+ * 빠른 제품 번역 (한 번의 API 호출로 모든 제품 번역)
+ */
+async function translateProductsFast(products: ProductInfo[]): Promise<ProductAnalysis[]> {
+  const apiKey = process.env.CLAUDE_API_KEY;
+
+  if (!apiKey || products.length === 0) {
+    // API 키 없으면 원문 그대로 반환
+    return products.map(p => ({
+      name: p.name,
+      nameRu: p.name,
+      category: p.category || '스킨케어',
+      price: parsePrice(p.price),
+      ingredients: p.ingredients || [],
+      ingredientsRu: [],
+      description: p.description,
+      descriptionRu: p.description,
+      imageUrls: p.images,
+      sellingPoints: [],
+      sellingPointsRu: [],
+    }));
+  }
+
+  try {
+    // 모든 제품명과 설명을 한 번에 번역 요청
+    const productList = products.map((p, i) => `${i + 1}. ${p.name}: ${p.description || '설명 없음'}`).join('\n');
+
+    const prompt = `다음 한국 화장품 제품 목록을 러시아어로 번역해주세요.
+
+${productList}
+
+다음 JSON 배열 형식으로 번역 결과를 출력하세요:
+[
+  {"nameRu": "러시아어 제품명", "descriptionRu": "러시아어 설명"}
+]
+
+- 제품 순서 유지
+- 브랜드명은 음역 (예: 어노브 → Анобу)
+- 화장품 전문 용어 사용
+- JSON 배열만 출력:`;
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4096,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Claude API 오류: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const text = data.content[0].text.trim();
+    const jsonMatch = text.match(/\[[\s\S]*\]/);
+
+    if (jsonMatch) {
+      const translations = JSON.parse(jsonMatch[0]);
+
+      return products.map((p, idx) => ({
+        name: p.name,
+        nameRu: translations[idx]?.nameRu || p.name,
+        category: p.category || '스킨케어',
+        price: parsePrice(p.price),
+        ingredients: p.ingredients || [],
+        ingredientsRu: [],
+        description: p.description,
+        descriptionRu: translations[idx]?.descriptionRu || p.description,
+        imageUrls: p.images,
+        sellingPoints: [],
+        sellingPointsRu: [],
+      }));
+    }
+  } catch (error) {
+    console.error('빠른 번역 실패:', error);
+  }
+
+  // 실패 시 원문 반환
+  return products.map(p => ({
+    name: p.name,
+    nameRu: p.name,
+    category: p.category || '스킨케어',
+    price: parsePrice(p.price),
+    ingredients: p.ingredients || [],
+    ingredientsRu: [],
+    description: p.description,
+    descriptionRu: p.description,
+    imageUrls: p.images,
+    sellingPoints: [],
+    sellingPointsRu: [],
+  }));
+}
+
+/**
+ * 제품 번역 (개별 - 레거시)
  */
 async function translateProducts(products: ProductInfo[]): Promise<ProductAnalysis[]> {
   const translated: ProductAnalysis[] = [];
