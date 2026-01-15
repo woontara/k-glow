@@ -11,6 +11,7 @@ export default function AnalyzeForm() {
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalyzerOutput | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showAllProducts, setShowAllProducts] = useState(false);
 
   const handleAnalyze = async () => {
     if (!websiteUrl) {
@@ -21,6 +22,7 @@ export default function AnalyzeForm() {
     setAnalyzing(true);
     setError(null);
     setResult(null);
+    setShowAllProducts(false);
 
     try {
       const response = await fetch('/api/analyze-website', {
@@ -223,12 +225,12 @@ export default function AnalyzeForm() {
               제품 목록 ({result.products.length}개)
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {result.products.slice(0, 9).map((product, index) => (
+              {(showAllProducts ? result.products : result.products.slice(0, 9)).map((product, index) => (
                 <div
                   key={index}
                   className="p-4 bg-[#FAF8F5] border border-[#E8E2D9] rounded-xl hover:shadow-md transition-shadow"
                 >
-                  {product.imageUrls[0] && (
+                  {product.imageUrls[0] ? (
                     <img
                       src={product.imageUrls[0]}
                       alt={product.name}
@@ -237,20 +239,37 @@ export default function AnalyzeForm() {
                         (e.target as HTMLImageElement).style.display = 'none';
                       }}
                     />
+                  ) : (
+                    <div className="w-full h-32 bg-gradient-to-br from-[#E8E2D9] to-[#D4CFC6] rounded-lg mb-3 flex items-center justify-center">
+                      <svg className="w-10 h-10 text-[#B2BEC3]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
                   )}
                   <h3 className="font-semibold text-[#2D3436] text-sm">{product.name}</h3>
                   <p className="text-xs text-[#8BA4B4] mb-2">{product.nameRu}</p>
                   <p className="text-sm font-bold text-[#5A7A8A]">
-                    ₩{product.price.toLocaleString()}
+                    {product.price > 0 ? `₩${product.price.toLocaleString()}` : '가격 미정'}
                   </p>
                   <p className="text-xs text-[#636E72]">{product.category}</p>
                 </div>
               ))}
             </div>
-            {result.products.length > 9 && (
-              <p className="text-center text-[#636E72] text-sm mt-4">
-                +{result.products.length - 9}개 제품 더 보기
-              </p>
+            {result.products.length > 9 && !showAllProducts && (
+              <button
+                onClick={() => setShowAllProducts(true)}
+                className="w-full mt-4 py-3 bg-[#FAF8F5] border border-[#E8E2D9] rounded-xl text-[#5A7A8A] font-medium hover:bg-[#F0EBE3] hover:border-[#8BA4B4] transition-all"
+              >
+                +{result.products.length - 9}개 제품 더보기
+              </button>
+            )}
+            {showAllProducts && result.products.length > 9 && (
+              <button
+                onClick={() => setShowAllProducts(false)}
+                className="w-full mt-4 py-3 bg-[#FAF8F5] border border-[#E8E2D9] rounded-xl text-[#5A7A8A] font-medium hover:bg-[#F0EBE3] hover:border-[#8BA4B4] transition-all"
+              >
+                접기
+              </button>
             )}
           </Card>
 

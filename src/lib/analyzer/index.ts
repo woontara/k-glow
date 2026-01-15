@@ -229,22 +229,37 @@ JSON 배열만 출력하세요:`;
     const jsonMatch = text.match(/\[[\s\S]*\]/);
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]);
+      // 제품 이미지만 필터링 (배너, 아이콘 등 제외)
+      const productImages = allImages.filter(img => {
+        const imgLower = img.toLowerCase();
+        // 배너, 로고, 아이콘 등 제외
+        const excludePatterns = ['banner', 'logo', 'icon', 'btn', 'button', 'bg', 'background', 'sns', 'footer', 'header', 'nav'];
+        if (excludePatterns.some(pattern => imgLower.includes(pattern))) return false;
+        // 너무 작은 이미지 제외 (URL에 크기 정보가 있는 경우)
+        if (/\d{1,2}x\d{1,2}/.test(imgLower) || imgLower.includes('thumbnail')) return false;
+        return true;
+      });
+
       return parsed.map((p: any, idx: number) => {
-        // 제품명 키워드로 이미지 매칭 시도
+        // 1차: 제품명 키워드로 이미지 매칭 시도
         const productNameLower = (p.name || '').toLowerCase().replace(/\s+/g, '');
-        const matchedImage = allImages.find(img => {
+        let matchedImage = productImages.find(img => {
           const imgLower = img.toLowerCase();
-          // 제품명의 일부가 이미지 URL에 포함되어 있는지 확인
-          const nameWords = productNameLower.split(/[-_]/);
+          const nameWords = productNameLower.split(/[-_\s]/);
           return nameWords.some((word: string) => word.length > 3 && imgLower.includes(word));
         });
+
+        // 2차: 매칭 실패 시 순서대로 할당 (이미지 없는 것보다 나음)
+        if (!matchedImage && productImages[idx]) {
+          matchedImage = productImages[idx];
+        }
 
         return {
           name: p.name || `제품 ${idx + 1}`,
           price: p.price || '0',
           category: p.category || '스킨케어',
           description: p.description || '',
-          images: matchedImage ? [matchedImage] : [], // 매칭된 이미지만 사용, 없으면 빈 배열
+          images: matchedImage ? [matchedImage] : [],
           ingredients: [],
         };
       });
