@@ -1,5 +1,5 @@
-// TranslateGemma - Hugging Face Inference API 기반 번역
-// Google의 오픈소스 번역 모델 TranslateGemma를 Hugging Face에서 사용
+// Gemini API 기반 번역
+// Google Gemini를 사용한 고품질 번역
 
 // 지원 언어 코드
 type SupportedLanguage = 'ru' | 'en' | 'ko' | 'zh' | 'ja';
@@ -26,25 +26,22 @@ const languageNames: Record<SupportedLanguage, string> = {
   ja: 'Japanese',
 };
 
-// Hugging Face TranslateGemma 모델 ID
-const HUGGINGFACE_MODEL = 'google/translategemma-12b-it';
-
 /**
- * TranslateGemma를 사용한 번역 (Hugging Face Inference API)
+ * Gemini API를 사용한 번역
  * @param request 번역 요청 (텍스트, 소스 언어, 대상 언어)
  * @returns 번역 결과
  */
 export async function translateWithGemma(
   request: TranslateGemmaRequest
 ): Promise<TranslateGemmaResult> {
-  const apiKey = process.env.HUGGINGFACE_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY;
 
   // 환경변수 확인
   if (!apiKey) {
-    console.warn('⚠️ HUGGINGFACE_API_KEY가 설정되지 않았습니다.');
+    console.warn('⚠️ GEMINI_API_KEY가 설정되지 않았습니다.');
     return {
       original: request.text,
-      translated: `[TranslateGemma 미설정: ${request.text}]`,
+      translated: `[Gemini 미설정: ${request.text}]`,
       sourceLanguage: request.sourceLanguage || 'auto',
       targetLanguage: request.targetLanguage,
     };
@@ -56,28 +53,36 @@ export async function translateWithGemma(
       ? languageNames[request.sourceLanguage]
       : '';
 
-    // TranslateGemma 프롬프트 형식
+    // 번역 프롬프트
     let prompt: string;
     if (sourceLang) {
-      prompt = `<translate>${sourceLang} to ${targetLang}: ${request.text}</translate>`;
+      prompt = `You are a professional translator. Translate the following ${sourceLang} text to ${targetLang}.
+Only output the translated text, nothing else. No explanations, no quotes, just the translation.
+
+Text: ${request.text}`;
     } else {
-      prompt = `<translate>to ${targetLang}: ${request.text}</translate>`;
+      prompt = `You are a professional translator. Translate the following text to ${targetLang}.
+Only output the translated text, nothing else. No explanations, no quotes, just the translation.
+
+Text: ${request.text}`;
     }
 
     const response = await fetch(
-      `https://api-inference.huggingface.co/models/${HUGGINGFACE_MODEL}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          inputs: prompt,
-          parameters: {
-            max_new_tokens: 1024,
+          contents: [
+            {
+              parts: [{ text: prompt }],
+            },
+          ],
+          generationConfig: {
             temperature: 0.3,
-            do_sample: false,
+            maxOutputTokens: 2048,
           },
         }),
       }
@@ -85,26 +90,12 @@ export async function translateWithGemma(
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('[TranslateGemma] API 에러:', response.status, errorText);
-      throw new Error(`Hugging Face API 오류: ${response.status}`);
+      console.error('[Gemini] API 에러:', response.status, errorText);
+      throw new Error(`Gemini API 오류: ${response.status}`);
     }
 
     const data = await response.json();
-
-    // 응답 파싱
-    let translated = '';
-    if (Array.isArray(data) && data[0]?.generated_text) {
-      translated = data[0].generated_text.trim();
-    } else if (data.generated_text) {
-      translated = data.generated_text.trim();
-    } else if (typeof data === 'string') {
-      translated = data.trim();
-    }
-
-    // 프롬프트가 응답에 포함된 경우 제거
-    if (translated.startsWith(prompt)) {
-      translated = translated.substring(prompt.length).trim();
-    }
+    const translated = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
 
     if (!translated) {
       throw new Error('번역 결과가 비어있습니다.');
@@ -117,7 +108,7 @@ export async function translateWithGemma(
       targetLanguage: request.targetLanguage,
     };
   } catch (error) {
-    console.error('[TranslateGemma] 번역 실패:', error);
+    console.error('[Gemini] 번역 실패:', error);
     return {
       original: request.text,
       translated: `[번역 실패: ${request.text}]`,
@@ -216,8 +207,8 @@ export async function translateIngredientsWithGemma(
 }
 
 /**
- * TranslateGemma 사용 가능 여부 확인
+ * Gemini 번역 사용 가능 여부 확인
  */
 export function isTranslateGemmaAvailable(): boolean {
-  return !!process.env.HUGGINGFACE_API_KEY;
+  return !!process.env.GEMINI_API_KEY;
 }

@@ -14,9 +14,9 @@ export async function POST(request: NextRequest) {
     let result: string;
     let method: string;
 
-    // TranslateGemma 사용 여부 확인
+    // Gemini 사용 여부 확인
     const usingGemma = isTranslateGemmaAvailable();
-    method = usingGemma ? 'TranslateGemma (Hugging Face)' : 'Claude API';
+    method = usingGemma ? 'Gemini API' : 'Claude API';
 
     // 번역 타입에 따라 다른 함수 사용
     switch (type) {
@@ -54,15 +54,14 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET() {
-  // TranslateGemma 설정 상태 확인
-  const gemmaAvailable = isTranslateGemmaAvailable();
+  // Gemini 설정 상태 확인
+  const geminiAvailable = isTranslateGemmaAvailable();
 
   return NextResponse.json({
     status: 'ok',
-    translateGemma: {
-      available: gemmaAvailable,
-      provider: 'Hugging Face',
-      model: 'google/translategemma-12b-it',
+    gemini: {
+      available: geminiAvailable,
+      model: 'gemini-2.0-flash',
     },
     claudeApi: {
       available: !!process.env.CLAUDE_API_KEY,
