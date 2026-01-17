@@ -1,4 +1,15 @@
-// Claude API 기반 번역 유틸리티
+// 번역 유틸리티
+// 러시아어: TranslateGemma (Google Vertex AI) 사용
+// 기타 언어: Claude API 사용
+
+import {
+  translateWithGemma,
+  translateProductNameWithGemma,
+  translateDescriptionWithGemma,
+  translateIngredientsWithGemma,
+  batchTranslateWithGemma,
+  isTranslateGemmaAvailable,
+} from '../translate-gemma';
 
 interface TranslationRequest {
   text: string;
@@ -13,7 +24,34 @@ interface TranslationResult {
 }
 
 /**
- * Claude API를 사용한 번역
+ * 메인 번역 함수
+ * 러시아어: TranslateGemma 사용 (Google Vertex AI)
+ * 기타 언어: Claude API 사용
+ */
+export async function translate(
+  request: TranslationRequest
+): Promise<TranslationResult> {
+  // 러시아어 번역 시 TranslateGemma 우선 사용
+  if (request.targetLanguage === 'ru' && isTranslateGemmaAvailable()) {
+    console.log('[Translator] TranslateGemma 사용 (러시아어)');
+    const result = await translateWithGemma({
+      text: request.text,
+      sourceLanguage: 'ko',
+      targetLanguage: 'ru',
+    });
+    return {
+      original: result.original,
+      translated: result.translated,
+      language: request.targetLanguage,
+    };
+  }
+
+  // 기타 언어는 Claude API 사용
+  return translateWithClaude(request);
+}
+
+/**
+ * Claude API를 사용한 번역 (폴백)
  */
 export async function translateWithClaude(
   request: TranslationRequest
@@ -105,11 +143,19 @@ export async function batchTranslate(
 
 /**
  * 화장품 제품명 번역 (특화)
+ * 러시아어: TranslateGemma 사용
  */
 export async function translateProductName(
   name: string,
   targetLanguage: 'ru' = 'ru'
 ): Promise<string> {
+  // 러시아어 번역 시 TranslateGemma 우선 사용
+  if (targetLanguage === 'ru' && isTranslateGemmaAvailable()) {
+    console.log('[Translator] 제품명 번역 - TranslateGemma 사용');
+    return translateProductNameWithGemma(name, targetLanguage);
+  }
+
+  // 폴백: Claude API
   const result = await translateWithClaude({
     text: name,
     targetLanguage,
@@ -120,11 +166,19 @@ export async function translateProductName(
 
 /**
  * 제품 설명 번역 (마케팅 카피 현지화)
+ * 러시아어: TranslateGemma 사용
  */
 export async function translateProductDescription(
   description: string,
   targetLanguage: 'ru' = 'ru'
 ): Promise<string> {
+  // 러시아어 번역 시 TranslateGemma 우선 사용
+  if (targetLanguage === 'ru' && isTranslateGemmaAvailable()) {
+    console.log('[Translator] 설명 번역 - TranslateGemma 사용');
+    return translateDescriptionWithGemma(description, targetLanguage);
+  }
+
+  // 폴백: Claude API
   const result = await translateWithClaude({
     text: description,
     targetLanguage,
@@ -135,11 +189,19 @@ export async function translateProductDescription(
 
 /**
  * 성분 번역 (전문 용어)
+ * 러시아어: TranslateGemma 사용
  */
 export async function translateIngredients(
   ingredients: string[],
   targetLanguage: 'ru' = 'ru'
 ): Promise<string[]> {
+  // 러시아어 번역 시 TranslateGemma 우선 사용
+  if (targetLanguage === 'ru' && isTranslateGemmaAvailable()) {
+    console.log('[Translator] 성분 번역 - TranslateGemma 사용');
+    return translateIngredientsWithGemma(ingredients, targetLanguage);
+  }
+
+  // 폴백: Claude API
   return batchTranslate(
     ingredients,
     targetLanguage,
