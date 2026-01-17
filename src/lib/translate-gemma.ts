@@ -29,6 +29,23 @@ const languageNames: Record<SupportedLanguage, string> = {
 };
 
 /**
+ * 서비스 계정 JSON 파싱
+ */
+function getServiceAccountCredentials() {
+  const credentialsJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+  if (!credentialsJson) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(credentialsJson);
+  } catch (error) {
+    console.error('[TranslateGemma] 서비스 계정 JSON 파싱 실패:', error);
+    return null;
+  }
+}
+
+/**
  * Vertex AI 클라이언트 생성
  */
 function getVertexAIClient() {
@@ -39,6 +56,20 @@ function getVertexAIClient() {
     throw new Error('GOOGLE_CLOUD_PROJECT 환경변수가 설정되지 않았습니다.');
   }
 
+  // 서비스 계정 JSON 키 사용 (Vercel 환경)
+  const credentials = getServiceAccountCredentials();
+
+  if (credentials) {
+    return new VertexAI({
+      project: projectId,
+      location: location,
+      googleAuthOptions: {
+        credentials: credentials,
+      },
+    });
+  }
+
+  // 기본 인증 사용 (로컬 환경)
   return new VertexAI({
     project: projectId,
     location: location,
