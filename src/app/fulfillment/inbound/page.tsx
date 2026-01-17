@@ -21,8 +21,6 @@ export default function FulfillmentInboundPage() {
     contactEmail: '',
     contactPhone: '',
     expectedDate: '',
-    warehouseLocation: 'moscow' as 'moscow' | 'kazan' | 'novosibirsk',
-    shippingMethod: 'sea' as 'sea' | 'air' | 'rail',
     notes: '',
   });
 
@@ -55,7 +53,7 @@ export default function FulfillmentInboundPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.brandName || !formData.contactEmail || !formData.expectedDate) {
+    if (!formData.brandName || !formData.contactEmail) {
       alert('필수 항목을 모두 입력해주세요');
       return;
     }
@@ -93,18 +91,6 @@ export default function FulfillmentInboundPage() {
       setLoading(false);
     }
   };
-
-  const warehouseOptions = [
-    { value: 'moscow', label: '모스크바 (Коледино)', desc: '러시아 중부 지역 커버' },
-    { value: 'kazan', label: '카잔 (Казань)', desc: '볼가 지역 커버' },
-    { value: 'novosibirsk', label: '노보시비르스크', desc: '시베리아 지역 커버' },
-  ];
-
-  const shippingOptions = [
-    { value: 'sea', label: '해상 운송', desc: '30-45일 소요, 가장 경제적' },
-    { value: 'air', label: '항공 운송', desc: '7-10일 소요, 빠른 배송' },
-    { value: 'rail', label: '철도 운송', desc: '15-20일 소요, 중간 비용' },
-  ];
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-[#FAFBFC] to-white py-12 px-4">
@@ -281,90 +267,10 @@ export default function FulfillmentInboundPage() {
             </div>
           </div>
 
-          {/* 3. 물류 정보 */}
+          {/* 3. 추가 요청사항 */}
           <div>
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <span className="w-8 h-8 bg-[#9B6B9E] text-white rounded-full flex items-center justify-center text-sm">3</span>
-              물류 정보
-            </h3>
-            <div className="space-y-4 pl-10">
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  입고 희망일 <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  value={formData.expectedDate}
-                  onChange={(e) => setFormData({ ...formData, expectedDate: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#9B6B9E] focus:border-transparent transition-all"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">입고 창고</label>
-                <div className="space-y-2">
-                  {warehouseOptions.map((option) => (
-                    <label
-                      key={option.value}
-                      className={`flex items-start gap-3 p-4 border rounded-xl cursor-pointer transition-all ${
-                        formData.warehouseLocation === option.value
-                          ? 'border-[#9B6B9E] bg-[#9B6B9E]/5'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="warehouse"
-                        value={option.value}
-                        checked={formData.warehouseLocation === option.value}
-                        onChange={(e) => setFormData({ ...formData, warehouseLocation: e.target.value as any })}
-                        className="mt-1 accent-[#9B6B9E]"
-                      />
-                      <div>
-                        <div className="font-semibold">{option.label}</div>
-                        <div className="text-sm text-gray-600">{option.desc}</div>
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">운송 방법</label>
-                <div className="space-y-2">
-                  {shippingOptions.map((option) => (
-                    <label
-                      key={option.value}
-                      className={`flex items-start gap-3 p-4 border rounded-xl cursor-pointer transition-all ${
-                        formData.shippingMethod === option.value
-                          ? 'border-[#9B6B9E] bg-[#9B6B9E]/5'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="shipping"
-                        value={option.value}
-                        checked={formData.shippingMethod === option.value}
-                        onChange={(e) => setFormData({ ...formData, shippingMethod: e.target.value as any })}
-                        className="mt-1 accent-[#9B6B9E]"
-                      />
-                      <div>
-                        <div className="font-semibold">{option.label}</div>
-                        <div className="text-sm text-gray-600">{option.desc}</div>
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* 4. 추가 요청사항 */}
-          <div>
-            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <span className="w-8 h-8 bg-gray-300 text-white rounded-full flex items-center justify-center text-sm">4</span>
+              <span className="w-8 h-8 bg-gray-300 text-white rounded-full flex items-center justify-center text-sm">3</span>
               추가 요청사항 (선택)
             </h3>
             <div className="pl-10">
@@ -406,7 +312,7 @@ export default function FulfillmentInboundPage() {
             </button>
             <button
               type="submit"
-              disabled={loading || !formData.brandName || !formData.contactEmail || !formData.expectedDate}
+              disabled={loading || !formData.brandName || !formData.contactEmail}
               className="flex-1 px-6 py-4 bg-[#9B6B9E] text-white font-semibold rounded-xl hover:bg-[#8A5A8D] disabled:bg-gray-300 disabled:cursor-not-allowed transition-all"
             >
               {loading ? '신청 중...' : '입고 신청하기'}

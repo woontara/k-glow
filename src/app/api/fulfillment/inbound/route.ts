@@ -15,9 +15,7 @@ interface InboundRequest {
   contactName?: string;
   contactEmail: string;
   contactPhone?: string;
-  expectedDate: string;
-  warehouseLocation: string;
-  shippingMethod: string;
+  expectedDate?: string;
   products: ProductItem[];
   totalQuantity: number;
   totalBoxes: number;
@@ -33,9 +31,9 @@ export async function POST(request: NextRequest) {
     const body: InboundRequest = await request.json();
 
     // 입력 검증
-    if (!body.brandName || !body.contactEmail || !body.expectedDate) {
+    if (!body.brandName || !body.contactEmail) {
       return NextResponse.json(
-        { error: '필수 정보가 누락되었습니다 (브랜드명, 이메일, 입고 희망일)' },
+        { error: '필수 정보가 누락되었습니다 (브랜드명, 이메일)' },
         { status: 400 }
       );
     }
@@ -80,20 +78,6 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 창고 위치 표시
-    const warehouseLabels: Record<string, string> = {
-      moscow: '모스크바 (Коледино)',
-      kazan: '카잔 (Казань)',
-      novosibirsk: '노보시비르스크',
-    };
-
-    // 운송 방법 표시
-    const shippingLabels: Record<string, string> = {
-      sea: '해상 운송',
-      air: '항공 운송',
-      rail: '철도 운송',
-    };
-
     // 제품 정보 텍스트 생성
     const productsText = body.products
       .map((p, i) => `  ${i + 1}. ${p.productName} - ${p.quantity}개 (${p.boxCount}박스)${p.barcode ? ` [${p.barcode}]` : ''}`)
@@ -106,10 +90,6 @@ export async function POST(request: NextRequest) {
       `📧 연락처: ${body.contactEmail}${body.contactPhone ? ` / ${body.contactPhone}` : ''}`,
       `🏢 브랜드: ${body.brandName}`,
       body.contactName ? `👤 담당자: ${body.contactName}` : null,
-      '---',
-      `📅 입고 희망일: ${body.expectedDate}`,
-      `🏭 입고 창고: ${warehouseLabels[body.warehouseLocation] || body.warehouseLocation}`,
-      `🚚 운송 방법: ${shippingLabels[body.shippingMethod] || body.shippingMethod}`,
       '---',
       `📋 제품 목록 (총 ${body.totalQuantity}개 / ${body.totalBoxes}박스):`,
       productsText,
@@ -146,7 +126,6 @@ export async function POST(request: NextRequest) {
       message: '입고 신청이 완료되었습니다',
       data: {
         brandName: body.brandName,
-        expectedDate: body.expectedDate,
         totalProducts: body.products.length,
         totalQuantity: body.totalQuantity,
         totalBoxes: body.totalBoxes,
