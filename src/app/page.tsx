@@ -588,8 +588,8 @@ export default function Home() {
               </p>
             </div>
 
-            {/* Feature card */}
-            <div className="max-w-lg mx-auto">
+            {/* Feature cards */}
+            <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
               <PremiumCard
                 href="/certification/new"
                 icon={
@@ -602,6 +602,19 @@ export default function Home() {
                 description="EAC, GOST 등 러시아 화장품 인증 절차를 전문가가 대행합니다."
                 gradient="bg-gradient-to-br from-[#8BA4B4] to-[#A8C5D4]"
                 index={0}
+              />
+              <PremiumCard
+                href="/fulfillment/inbound"
+                icon={
+                  <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                  </svg>
+                }
+                title="Wildberries 입고 신청"
+                titleEn="Fulfillment"
+                description="Wildberries 풀필먼트 센터 입고를 위한 물류 대행 서비스입니다."
+                gradient="bg-gradient-to-br from-[#9B6B9E] to-[#C49BC8]"
+                index={1}
               />
             </div>
           </div>
