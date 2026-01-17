@@ -1,7 +1,5 @@
-// TranslateGemma - Google Vertex AI 기반 번역
-// Google의 오픈소스 번역 모델 TranslateGemma를 사용한 고품질 번역
-
-import { VertexAI } from '@google-cloud/vertexai';
+// TranslateGemma - Hugging Face Inference API 기반 번역
+// Google의 오픈소스 번역 모델 TranslateGemma를 Hugging Face에서 사용
 
 // 지원 언어 코드
 type SupportedLanguage = 'ru' | 'en' | 'ko' | 'zh' | 'ja';
@@ -19,7 +17,7 @@ interface TranslateGemmaResult {
   targetLanguage: string;
 }
 
-// 언어 코드 -> 영문 언어명 매핑 (TranslateGemma 프롬프트용)
+// 언어 코드 -> 영문 언어명 매핑
 const languageNames: Record<SupportedLanguage, string> = {
   ru: 'Russian',
   en: 'English',
@@ -28,65 +26,22 @@ const languageNames: Record<SupportedLanguage, string> = {
   ja: 'Japanese',
 };
 
-/**
- * 서비스 계정 JSON 파싱
- */
-function getServiceAccountCredentials() {
-  const credentialsJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
-  if (!credentialsJson) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(credentialsJson);
-  } catch (error) {
-    console.error('[TranslateGemma] 서비스 계정 JSON 파싱 실패:', error);
-    return null;
-  }
-}
+// Hugging Face TranslateGemma 모델 ID
+const HUGGINGFACE_MODEL = 'google/translategemma-12b-it';
 
 /**
- * Vertex AI 클라이언트 생성
- */
-function getVertexAIClient() {
-  const projectId = process.env.GOOGLE_CLOUD_PROJECT;
-  const location = process.env.GOOGLE_CLOUD_LOCATION || 'us-central1';
-
-  if (!projectId) {
-    throw new Error('GOOGLE_CLOUD_PROJECT 환경변수가 설정되지 않았습니다.');
-  }
-
-  // 서비스 계정 JSON 키 사용 (Vercel 환경)
-  const credentials = getServiceAccountCredentials();
-
-  if (credentials) {
-    return new VertexAI({
-      project: projectId,
-      location: location,
-      googleAuthOptions: {
-        credentials: credentials,
-      },
-    });
-  }
-
-  // 기본 인증 사용 (로컬 환경)
-  return new VertexAI({
-    project: projectId,
-    location: location,
-  });
-}
-
-/**
- * TranslateGemma를 사용한 번역
+ * TranslateGemma를 사용한 번역 (Hugging Face Inference API)
  * @param request 번역 요청 (텍스트, 소스 언어, 대상 언어)
  * @returns 번역 결과
  */
 export async function translateWithGemma(
   request: TranslateGemmaRequest
 ): Promise<TranslateGemmaResult> {
+  const apiKey = process.env.HUGGINGFACE_API_KEY;
+
   // 환경변수 확인
-  if (!process.env.GOOGLE_CLOUD_PROJECT) {
-    console.warn('⚠️ GOOGLE_CLOUD_PROJECT가 설정되지 않았습니다.');
+  if (!apiKey) {
+    console.warn('⚠️ HUGGINGFACE_API_KEY가 설정되지 않았습니다.');
     return {
       original: request.text,
       translated: `[TranslateGemma 미설정: ${request.text}]`,
@@ -96,30 +51,60 @@ export async function translateWithGemma(
   }
 
   try {
-    const vertexAI = getVertexAIClient();
-
-    // TranslateGemma 12B 모델 사용 (성능/효율 균형)
-    const model = vertexAI.getGenerativeModel({
-      model: 'translategemma-12b',
-    });
-
-    // TranslateGemma 프롬프트 형식
     const targetLang = languageNames[request.targetLanguage];
     const sourceLang = request.sourceLanguage
       ? languageNames[request.sourceLanguage]
       : '';
 
-    // TranslateGemma 권장 프롬프트 형식
+    // TranslateGemma 프롬프트 형식
     let prompt: string;
     if (sourceLang) {
-      prompt = `Translate from ${sourceLang} to ${targetLang}:\n${request.text}`;
+      prompt = `<translate>${sourceLang} to ${targetLang}: ${request.text}</translate>`;
     } else {
-      prompt = `Translate to ${targetLang}:\n${request.text}`;
+      prompt = `<translate>to ${targetLang}: ${request.text}</translate>`;
     }
 
-    const result = await model.generateContent(prompt);
-    const response = result.response;
-    const translated = response.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+    const response = await fetch(
+      `https://api-inference.huggingface.co/models/${HUGGINGFACE_MODEL}`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          inputs: prompt,
+          parameters: {
+            max_new_tokens: 1024,
+            temperature: 0.3,
+            do_sample: false,
+          },
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[TranslateGemma] API 에러:', response.status, errorText);
+      throw new Error(`Hugging Face API 오류: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // 응답 파싱
+    let translated = '';
+    if (Array.isArray(data) && data[0]?.generated_text) {
+      translated = data[0].generated_text.trim();
+    } else if (data.generated_text) {
+      translated = data.generated_text.trim();
+    } else if (typeof data === 'string') {
+      translated = data.trim();
+    }
+
+    // 프롬프트가 응답에 포함된 경우 제거
+    if (translated.startsWith(prompt)) {
+      translated = translated.substring(prompt.length).trim();
+    }
 
     if (!translated) {
       throw new Error('번역 결과가 비어있습니다.');
@@ -234,5 +219,5 @@ export async function translateIngredientsWithGemma(
  * TranslateGemma 사용 가능 여부 확인
  */
 export function isTranslateGemmaAvailable(): boolean {
-  return !!process.env.GOOGLE_CLOUD_PROJECT;
+  return !!process.env.HUGGINGFACE_API_KEY;
 }

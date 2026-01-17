@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
 
     // TranslateGemma 사용 여부 확인
     const usingGemma = isTranslateGemmaAvailable();
-    method = usingGemma ? 'TranslateGemma (Vertex AI)' : 'Claude API';
+    method = usingGemma ? 'TranslateGemma (Hugging Face)' : 'Claude API';
 
     // 번역 타입에 따라 다른 함수 사용
     switch (type) {
@@ -56,15 +56,13 @@ export async function POST(request: NextRequest) {
 export async function GET() {
   // TranslateGemma 설정 상태 확인
   const gemmaAvailable = isTranslateGemmaAvailable();
-  const projectId = process.env.GOOGLE_CLOUD_PROJECT || 'not set';
-  const location = process.env.GOOGLE_CLOUD_LOCATION || 'us-central1 (default)';
 
   return NextResponse.json({
     status: 'ok',
     translateGemma: {
       available: gemmaAvailable,
-      projectId: gemmaAvailable ? projectId : 'not configured',
-      location: gemmaAvailable ? location : 'not configured',
+      provider: 'Hugging Face',
+      model: 'google/translategemma-12b-it',
     },
     claudeApi: {
       available: !!process.env.CLAUDE_API_KEY,
