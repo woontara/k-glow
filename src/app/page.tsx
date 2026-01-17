@@ -559,37 +559,10 @@ export default function Home() {
               className={`text-xl md:text-2xl text-[#636E72] max-w-3xl mx-auto mb-14 leading-relaxed font-light ${mounted ? 'animate-reveal' : 'opacity-0'}`}
               style={{ animationDelay: '0.4s' }}
             >
-              K-Glow는 한국 프리미엄 화장품 브랜드의
+              K-Glow는 한국의 뷰티 브랜드의
               <br className="hidden md:block" />
-              <span className="text-[#8BA4B4] font-medium">러시아·CIS 시장</span> 진출을 AI 기반으로 지원합니다
+              <span className="text-[#8BA4B4] font-medium">러시아 CIS 시장</span> 진출을 지원합니다.
             </p>
-
-            {/* CTA Buttons */}
-            <div
-              className={`flex flex-col sm:flex-row gap-6 justify-center ${mounted ? 'animate-reveal' : 'opacity-0'}`}
-              style={{ animationDelay: '0.6s' }}
-            >
-              <MagneticButton href="/analyze" variant="primary">
-                <span>브랜드 분석 시작</span>
-                <svg className="w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                </svg>
-              </MagneticButton>
-
-              <MagneticButton href="/partners" variant="secondary">
-                <span>파트너사 둘러보기</span>
-              </MagneticButton>
-            </div>
-          </div>
-
-          {/* Scroll indicator */}
-          <div className="absolute bottom-12 left-1/2 -translate-x-1/2">
-            <div className="flex flex-col items-center gap-3">
-              <span className="text-xs font-medium text-[#8BA4B4] tracking-[0.2em] uppercase">Scroll</span>
-              <div className="w-6 h-12 border-2 border-[#8BA4B4]/40 rounded-full flex justify-center pt-2">
-                <div className="w-1.5 h-3 bg-[#8BA4B4]/60 rounded-full animate-bounce" />
-              </div>
-            </div>
           </div>
         </section>
 
@@ -615,50 +588,8 @@ export default function Home() {
               </p>
             </div>
 
-            {/* Feature cards grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <PremiumCard
-                href="/partners"
-                icon={
-                  <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                  </svg>
-                }
-                title="파트너사 네트워크"
-                titleEn="Partners"
-                description="K-Glow와 함께하는 검증된 한국 화장품 브랜드들을 만나보세요. 엄선된 파트너사들이 러시아 시장 진출을 기다리고 있습니다."
-                gradient="bg-gradient-to-br from-[#8BA4B4] to-[#A8C5D4]"
-                index={0}
-              />
-
-              <PremiumCard
-                href="/calculator"
-                icon={
-                  <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                  </svg>
-                }
-                title="스마트 견적 계산"
-                titleEn="Calculator"
-                description="실시간 환율 반영, 관세 및 물류비 포함. 정확한 수출 견적을 즉시 확인하세요."
-                gradient="bg-gradient-to-br from-[#7A9AAD] to-[#9BB4C4]"
-                index={1}
-              />
-
-              <PremiumCard
-                href="/analyze"
-                icon={
-                  <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                }
-                title="AI 브랜드 분석"
-                titleEn="AI Analysis"
-                description="Claude AI 기반 웹사이트 분석으로 브랜드 정보를 자동 추출하고, 러시아어로 번역합니다."
-                gradient="bg-gradient-to-br from-[#6B8A9A] to-[#8BA4B4]"
-                index={2}
-              />
-
+            {/* Feature card */}
+            <div className="max-w-lg mx-auto">
               <PremiumCard
                 href="/certification/new"
                 icon={
@@ -669,109 +600,9 @@ export default function Home() {
                 title="인증 대행 서비스"
                 titleEn="Certification"
                 description="EAC, GOST 등 러시아 화장품 인증 절차를 전문가가 대행합니다."
-                gradient="bg-gradient-to-br from-[#9AA4B4] to-[#B4C4D4]"
-                index={3}
-                disabled
+                gradient="bg-gradient-to-br from-[#8BA4B4] to-[#A8C5D4]"
+                index={0}
               />
-            </div>
-          </div>
-        </section>
-
-        {/* Stats Section */}
-        <section className="relative py-32 px-6 overflow-hidden">
-          {/* Glass background */}
-          <div className="absolute inset-0 bg-gradient-to-br from-[#8BA4B4]/5 via-[#E8B4B8]/5 to-[#D4C4A8]/5" />
-          <div className="absolute inset-0 glass-effect" />
-
-          <div className="relative max-w-6xl mx-auto">
-            <div className="text-center mb-20">
-              <h2 className="font-display text-4xl md:text-6xl font-semibold text-[#2D3436] mb-4">
-                왜 <span className="text-gradient">K-Glow</span>인가?
-              </h2>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-              {[
-                {
-                  value: 'AI',
-                  label: '자동화',
-                  description: 'Claude AI 기반 번역 및 분석으로 빠르고 정확한 현지화',
-                  gradient: 'from-[#8BA4B4] to-[#6B8A9A]',
-                },
-                {
-                  value: '실시간',
-                  label: '환율',
-                  description: 'KRW ↔ RUB 실시간 환율 반영으로 정확한 견적 산출',
-                  gradient: 'from-[#C4A4A8] to-[#A48488]',
-                },
-                {
-                  value: '원스톱',
-                  label: '서비스',
-                  description: '분석부터 인증까지 러시아 진출에 필요한 모든 서비스',
-                  gradient: 'from-[#A4B4A8] to-[#849488]',
-                },
-              ].map((stat, index) => (
-                <div key={index} className="text-center group">
-                  <div className={`
-                    font-display text-5xl md:text-6xl font-bold mb-2
-                    bg-gradient-to-r ${stat.gradient} bg-clip-text text-transparent
-                    transition-transform duration-500 group-hover:scale-110
-                  `}>
-                    {stat.value}
-                  </div>
-                  <div className="text-2xl font-semibold text-[#2D3436] mb-4">
-                    {stat.label}
-                  </div>
-                  <p className="text-[#636E72] max-w-xs mx-auto">
-                    {stat.description}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* CTA Section */}
-        <section className="relative py-32 px-6">
-          <div className="relative max-w-5xl mx-auto">
-            <div className="relative overflow-hidden rounded-[3rem] p-16 md:p-20">
-              {/* Animated gradient background */}
-              <div
-                className="absolute inset-0 animate-aurora"
-                style={{
-                  background: 'linear-gradient(-45deg, #7A9AAD, #8BA4B4, #9BB4C4, #A8C5D4, #8BA4B4)',
-                }}
-              />
-
-              {/* Glass overlay */}
-              <div className="absolute inset-0 bg-white/10 backdrop-blur-sm" />
-
-              {/* Decorative elements */}
-              <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
-              <div className="absolute bottom-0 left-0 w-72 h-72 bg-[#E8B4B8]/20 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl" />
-
-              {/* Shimmer effect */}
-              <div className="absolute inset-0 animate-shimmer-premium" />
-
-              <div className="relative text-center text-white">
-                <h2 className="font-display text-4xl md:text-6xl font-semibold mb-8">
-                  지금 시작하세요
-                </h2>
-                <p className="text-white/80 text-xl mb-12 max-w-2xl mx-auto leading-relaxed">
-                  브랜드 웹사이트 URL만 입력하면
-                  <br />
-                  AI가 자동으로 분석하고 러시아 시장 진출 전략을 제안합니다
-                </p>
-                <Link
-                  href="/analyze"
-                  className="inline-flex items-center justify-center gap-4 px-12 py-6 bg-white text-[#5A7A8A] font-bold text-lg rounded-full shadow-2xl hover:shadow-[0_30px_60px_rgba(0,0,0,0.2)] transition-all duration-500 hover:-translate-y-2 hover:scale-105"
-                >
-                  무료로 분석 시작하기
-                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                  </svg>
-                </Link>
-              </div>
             </div>
           </div>
         </section>
