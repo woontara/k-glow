@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import HSCodeSearch from './HSCodeSearch';
+import { HSCode } from '@/data/hs-codes-cosmetics';
 
 interface UploadedFile {
   originalName: string;
@@ -22,6 +24,8 @@ export default function CertificationForm() {
     productName: '',
     productCategory: '',
     productDescription: '',
+    hsCode: '',
+    hsCodeName: '',
     email: '',
     notes: '',
   });
@@ -101,6 +105,10 @@ export default function CertificationForm() {
         size: file.size,
       }));
 
+      const hsCodeInfo = formData.hsCode
+        ? `HS코드: ${formData.hsCode} (${formData.hsCodeName})\n`
+        : '';
+
       const response = await fetch('/api/certifications', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -110,7 +118,8 @@ export default function CertificationForm() {
           certType: formData.certType,
           estimatedCost,
           email: formData.email,
-          notes: `제품명: ${formData.productName}\n카테고리: ${formData.productCategory}\n제품 설명: ${formData.productDescription}\n\n${formData.notes}`,
+          hsCode: formData.hsCode,
+          notes: `제품명: ${formData.productName}\n카테고리: ${formData.productCategory}\n${hsCodeInfo}제품 설명: ${formData.productDescription}\n\n${formData.notes}`,
           documents,
         }),
       });
@@ -251,6 +260,27 @@ export default function CertificationForm() {
               <option value="바디케어">바디케어</option>
               <option value="기타">기타</option>
             </select>
+          </div>
+
+          {/* HS코드 검색 */}
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              HS코드 <span className="text-gray-400 font-normal">(선택)</span>
+            </label>
+            <HSCodeSearch
+              value={formData.hsCode}
+              onChange={(code, hsCode) => {
+                setFormData({
+                  ...formData,
+                  hsCode: code,
+                  hsCodeName: hsCode?.nameKo || '',
+                });
+              }}
+              placeholder="제품명으로 HS코드 검색 (예: 크림, 샴푸, 립스틱)"
+            />
+            <p className="text-xs text-gray-500 mt-1.5">
+              수출 시 필요한 HS코드를 검색하여 선택해주세요. 모르시면 비워두셔도 됩니다.
+            </p>
           </div>
 
           <div>
