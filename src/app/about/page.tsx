@@ -2,13 +2,52 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 
 export default function AboutPage() {
   const [mounted, setMounted] = useState(false);
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const isAdmin = session?.user?.role === 'ADMIN';
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // 어드민이 아닌 경우 접근 제한
+  if (status === 'loading') {
+    return (
+      <main className="min-h-screen bg-gradient-luxury flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-[#8BA4B4]/30 border-t-[#8BA4B4] rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-[#636E72]">로딩 중...</p>
+        </div>
+      </main>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <main className="min-h-screen bg-gradient-luxury flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto px-6">
+          <div className="w-20 h-20 bg-[#E8B4B8]/20 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg className="w-10 h-10 text-[#E8B4B8]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m0 0v2m0-2h2m-2 0H10m4-6V7a4 4 0 00-8 0v4m-4 6h16a2 2 0 002-2v-4a2 2 0 00-2-2H6a2 2 0 00-2 2v4a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-bold text-[#2D3436] mb-4">접근 권한이 없습니다</h1>
+          <p className="text-[#636E72] mb-8">이 페이지는 관리자만 접근할 수 있습니다.</p>
+          <Link
+            href="/"
+            className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-[#8BA4B4] to-[#A8C5D4] text-white font-semibold rounded-xl hover:shadow-lg transition-all"
+          >
+            홈으로 돌아가기
+          </Link>
+        </div>
+      </main>
+    );
+  }
 
   const stats = [
     { value: '500+', label: '파트너 브랜드', labelEn: 'Partner Brands', icon: '🏢' },

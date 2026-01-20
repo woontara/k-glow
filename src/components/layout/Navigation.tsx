@@ -38,17 +38,19 @@ export default function Navigation() {
     }
   }, [pathname]);
 
+  const isAdmin = session?.user?.role === 'ADMIN';
+
   const navLinks = [
-    { href: '/', label: '홈', labelEn: 'Home' },
-    { href: '/about', label: '소개', labelEn: 'About' },
-    { href: '/services', label: '서비스', labelEn: 'Services' },
-    { href: '/portfolio', label: '포트폴리오', labelEn: 'Portfolio' },
-    { href: '/partners', label: '파트너사', labelEn: 'Partners' },
-    { href: '/calculator', label: '견적 계산', labelEn: 'Calculator' },
-    { href: '/ai-tools', label: 'AI 도구', labelEn: 'AI Tools' },
-    { href: '/forum', label: '포럼', labelEn: 'Forum' },
-    { href: '/contact', label: '문의하기', labelEn: 'Contact' },
-  ];
+    { href: '/', label: '홈', labelEn: 'Home', adminOnly: false },
+    { href: '/about', label: '소개', labelEn: 'About', adminOnly: true },
+    { href: '/services', label: '서비스', labelEn: 'Services', adminOnly: true },
+    { href: '/portfolio', label: '포트폴리오', labelEn: 'Portfolio', adminOnly: true },
+    { href: '/partners', label: '파트너사', labelEn: 'Partners', adminOnly: true },
+    { href: '/calculator', label: '견적 계산', labelEn: 'Calculator', adminOnly: true },
+    { href: '/ai-tools', label: 'AI 도구', labelEn: 'AI Tools', adminOnly: false },
+    { href: '/forum', label: '포럼', labelEn: 'Forum', adminOnly: true },
+    { href: '/contact', label: '문의하기', labelEn: 'Contact', adminOnly: false },
+  ].filter(link => !link.adminOnly || isAdmin);
 
   const isActive = (href: string) => {
     if (href === '/') {
