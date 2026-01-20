@@ -15,9 +15,22 @@ export default function ContactPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
+  // 카카오톡 채널 ID (환경변수에서 가져옴)
+  const kakaoChannelId = process.env.NEXT_PUBLIC_KAKAO_CHANNEL_ID;
+
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // 카카오톡 채널 채팅 열기
+  const handleKakaoChat = () => {
+    if (kakaoChannelId) {
+      // 카카오톡 채널 1:1 채팅 URL로 이동
+      window.open(`https://pf.kakao.com/${kakaoChannelId}/chat`, '_blank');
+    } else {
+      alert('카카오톡 채널이 준비 중입니다. 이메일로 문의해주세요.');
+    }
+  };
 
   const services = [
     '인증 대행 (EAC/GOST)',
@@ -198,7 +211,10 @@ export default function ContactPage() {
                   <p className="text-sm text-white/80 mb-6">
                     긴급한 문의사항이 있으시면 카카오톡으로 연락주세요.
                   </p>
-                  <button className="w-full py-4 bg-[#FEE500] text-[#3C1E1E] font-semibold rounded-xl hover:shadow-xl transition-all flex items-center justify-center gap-2 hover:-translate-y-1">
+                  <button
+                    onClick={handleKakaoChat}
+                    className="w-full py-4 bg-[#FEE500] text-[#3C1E1E] font-semibold rounded-xl hover:shadow-xl transition-all flex items-center justify-center gap-2 hover:-translate-y-1 active:scale-[0.98]"
+                  >
                     <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M12 3C6.477 3 2 6.477 2 10.5c0 2.47 1.607 4.647 4.031 5.907-.165.605-.601 2.19-.689 2.532-.11.428.157.422.33.307.137-.09 2.179-1.478 3.058-2.073.417.056.845.086 1.27.086 5.523 0 10-3.477 10-7.759C20 6.477 17.523 3 12 3z" />
                     </svg>
