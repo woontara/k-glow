@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import * as XLSX from 'xlsx';
 import ExcelJS from 'exceljs';
+import { fal } from '@fal-ai/client';
 
 interface Supplier {
   id: string;
@@ -81,6 +82,7 @@ export default function SuppliersPage() {
     products: Record<string, unknown>[];
   } | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState('');
   const [parsing, setParsing] = useState(false);
   const [uploadResult, setUploadResult] = useState<{
     success: boolean;
@@ -287,21 +289,81 @@ export default function SuppliersPage() {
     }
   };
 
+  // Base64 Data URL을 Blob으로 변환
+  const dataUrlToBlob = (dataUrl: string): Blob => {
+    const [header, base64] = dataUrl.split(',');
+    const mimeMatch = header.match(/:(.*?);/);
+    const mime = mimeMatch ? mimeMatch[1] : 'image/png';
+    const binary = atob(base64);
+    const array = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      array[i] = binary.charCodeAt(i);
+    }
+    return new Blob([array], { type: mime });
+  };
+
+  // 이미지를 fal.ai 스토리지에 업로드
+  const uploadImageToStorage = async (dataUrl: string, index: number): Promise<string> => {
+    const blob = dataUrlToBlob(dataUrl);
+    const file = new File([blob], `product-image-${index}.png`, { type: blob.type });
+    const url = await fal.storage.upload(file);
+    return url;
+  };
+
   // 서버에 데이터 전송
   const handleUpload = async () => {
     if (!parsedData || !supplierName) return;
 
     setUploading(true);
     setUploadResult(null);
+    setUploadProgress('준비 중...');
 
     try {
+      // 1. fal.ai API 키 가져오기
+      setUploadProgress('이미지 업로드 준비 중...');
+      const keyResponse = await fetch('/api/ai-tools/key?modelId=fal-ai/birefnet');
+      if (!keyResponse.ok) {
+        throw new Error('이미지 업로드 키를 가져올 수 없습니다');
+      }
+      const keyData = await keyResponse.json();
+      fal.config({ credentials: keyData.apiKey });
+
+      // 2. Base64 이미지를 fal.ai 스토리지에 업로드
+      const productsWithUrls = [...parsedData.products];
+      const imagesWithBase64 = productsWithUrls.filter(
+        p => p.imageUrl && String(p.imageUrl).startsWith('data:')
+      );
+
+      if (imagesWithBase64.length > 0) {
+        let uploadedCount = 0;
+        console.log(`이미지 ${imagesWithBase64.length}개 업로드 중...`);
+
+        for (let i = 0; i < productsWithUrls.length; i++) {
+          const product = productsWithUrls[i];
+          if (product.imageUrl && String(product.imageUrl).startsWith('data:')) {
+            try {
+              setUploadProgress(`이미지 업로드 중... (${uploadedCount + 1}/${imagesWithBase64.length})`);
+              const url = await uploadImageToStorage(String(product.imageUrl), i);
+              productsWithUrls[i] = { ...product, imageUrl: url };
+              uploadedCount++;
+              console.log(`이미지 ${uploadedCount}/${imagesWithBase64.length} 업로드 완료`);
+            } catch (imgError) {
+              console.warn(`이미지 ${i + 1} 업로드 실패:`, imgError);
+              productsWithUrls[i] = { ...product, imageUrl: null };
+            }
+          }
+        }
+      }
+
+      // 3. 서버에 제품 데이터 전송
+      setUploadProgress('제품 데이터 저장 중...');
       const response = await fetch('/api/admin/suppliers/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           supplierName,
           replaceExisting,
-          products: parsedData.products
+          products: productsWithUrls
         })
       });
 
@@ -602,7 +664,7 @@ export default function SuppliersPage() {
                 disabled={!parsedData || !supplierName || uploading}
                 className="px-6 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {uploading ? '업로드 중...' : `${parsedData?.products.length || 0}개 상품 업로드`}
+                {uploading ? uploadProgress : `${parsedData?.products.length || 0}개 상품 업로드`}
               </button>
             </div>
           </div>
