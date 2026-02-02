@@ -263,7 +263,7 @@ export default function SuppliersPage() {
       } else {
         setUploadResult({
           success: false,
-          message: data.error || '업로드 실패'
+          message: `${data.error || '업로드 실패'}${data.details ? ` - ${data.details}` : ''}`
         });
       }
     } catch (error) {

@@ -79,9 +79,22 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('제품 등록 실패:', error);
+
+    // Prisma 에러 상세 처리
+    let errorMessage = '제품 등록에 실패했습니다';
+    let errorDetails = error instanceof Error ? error.message : String(error);
+
+    if (error && typeof error === 'object' && 'code' in error) {
+      const prismaError = error as { code: string; meta?: { target?: string[] } };
+      if (prismaError.code === 'P2002') {
+        errorMessage = '중복된 데이터가 있습니다';
+        errorDetails = `유니크 제약조건 위반: ${prismaError.meta?.target?.join(', ') || '알 수 없음'}`;
+      }
+    }
+
     return NextResponse.json({
-      error: '제품 등록에 실패했습니다',
-      details: error instanceof Error ? error.message : String(error)
+      error: errorMessage,
+      details: errorDetails
     }, { status: 500 });
   }
 }

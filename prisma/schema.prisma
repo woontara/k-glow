@@ -571,7 +571,6 @@ model SupplierProduct {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  @@unique([supplierId, barcode])
   @@index([supplierId])
   @@index([nameKr])
   @@index([barcode])
