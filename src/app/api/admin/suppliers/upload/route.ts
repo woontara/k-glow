@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 import * as XLSX from 'xlsx';
 
 // 컬럼명 매핑 (다양한 형식의 컬럼명을 표준 필드로 매핑)
@@ -133,24 +134,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 제품 데이터 파싱 및 저장
-    const products: Array<{
-      supplierId: string;
-      productCode?: string;
-      barcode?: string;
-      name: string;
-      nameEn?: string;
-      category?: string;
-      subCategory?: string;
-      supplyPrice?: number;
-      retailPrice?: number;
-      volume?: string;
-      weight?: number;
-      unit?: string;
-      minOrderQty?: number;
-      boxQty?: number;
-      imageUrl?: string;
-      rawData: Record<string, unknown>;
-    }> = [];
+    const products: Prisma.SupplierProductCreateManyInput[] = [];
 
     for (const row of dataRows) {
       if (!row || row.every(cell => cell === '')) continue;
@@ -195,7 +179,7 @@ export async function POST(request: NextRequest) {
 
       // 상품명이 있는 경우에만 추가
       if (product.name && String(product.name).trim()) {
-        products.push(product as typeof products[0]);
+        products.push(product as Prisma.SupplierProductCreateManyInput);
       }
     }
 
