@@ -158,8 +158,43 @@ export default function SuppliersPage() {
 
       // 1. xlsx로 데이터 파싱
       const xlsxWorkbook = XLSX.read(buffer, { type: 'array' });
-      const sheetName = xlsxWorkbook.SheetNames[0];
-      const sheet = xlsxWorkbook.Sheets[sheetName];
+
+      // 가장 적합한 시트 찾기 (PRODUCT LIST 우선, 없으면 데이터가 가장 많은 시트)
+      let bestSheetName = xlsxWorkbook.SheetNames[0];
+      let bestSheetIndex = 0;
+
+      // "PRODUCT LIST" 또는 유사한 이름 찾기
+      const productSheetNames = ['PRODUCT LIST', 'PRODUCTS', '상품목록', '제품목록', 'LIST'];
+      for (const name of xlsxWorkbook.SheetNames) {
+        const upperName = name.toUpperCase();
+        if (productSheetNames.some(pn => upperName.includes(pn))) {
+          bestSheetName = name;
+          bestSheetIndex = xlsxWorkbook.SheetNames.indexOf(name);
+          console.log(`제품 시트 발견: "${name}"`);
+          break;
+        }
+      }
+
+      // 특별한 시트를 못 찾았다면, 데이터가 가장 많은 시트 선택
+      if (bestSheetIndex === 0 && xlsxWorkbook.SheetNames.length > 1) {
+        let maxCells = 0;
+        for (let i = 0; i < xlsxWorkbook.SheetNames.length; i++) {
+          const sheetName = xlsxWorkbook.SheetNames[i];
+          const sheet = xlsxWorkbook.Sheets[sheetName];
+          const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1');
+          const cellCount = (range.e.r - range.s.r + 1) * (range.e.c - range.s.c + 1);
+          if (cellCount > maxCells) {
+            maxCells = cellCount;
+            bestSheetName = sheetName;
+            bestSheetIndex = i;
+          }
+        }
+        console.log(`가장 큰 시트 선택: "${bestSheetName}" (인덱스: ${bestSheetIndex})`);
+      }
+
+      console.log(`시트 목록: ${xlsxWorkbook.SheetNames.join(', ')} | 선택된 시트: "${bestSheetName}"`);
+
+      const sheet = xlsxWorkbook.Sheets[bestSheetName];
       const rawData = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' }) as unknown[][];
 
       if (rawData.length < 2) {
@@ -168,12 +203,12 @@ export default function SuppliersPage() {
         return;
       }
 
-      // 2. exceljs로 이미지 추출
+      // 2. exceljs로 이미지 추출 (같은 시트 인덱스 사용)
       const imageMap = new Map<number, string>(); // row -> image data URL
       try {
         const excelWorkbook = new ExcelJS.Workbook();
         await excelWorkbook.xlsx.load(buffer);
-        const worksheet = excelWorkbook.worksheets[0];
+        const worksheet = excelWorkbook.worksheets[bestSheetIndex];
 
         if (worksheet) {
           const images = worksheet.getImages();
