@@ -33,24 +33,30 @@ const COLUMN_MAPPINGS: Record<string, string[]> = {
   // 핵심 공통 필드
   barcode: ['바코드', 'Barcode', 'Barcode(Case)', 'Barcode(Pouch)', 'EAN', 'UPC'],
   nameKr: ['제품명(한글)', 'Product Name(KR)', 'Product Name (KR)', '상품명', '품명', '제품명', '한글명'],
-  nameEn: ['Product Name', 'Product Name(EN)', 'Product Name (EN)', '영문상품명', 'English Name'],
+  nameEn: ['Product Name(EN)', 'Product Name (EN)', '영문상품명', 'English Name', 'Product Name'],
   msrp: ['MSRP', 'MSRP (KRW)', '소비자가', '권장소비자가', 'Retail Price', 'SRP', '정가'],
-  supplyPrice: ['Supply Price', 'SUPPLY PRICE', 'SUPPLY PRICE (-VAT)', 'Supply Price (KRW/-VAT)', '공급가', '공급가격'],
+  supplyPrice: ['Supply Price', 'SUPPLY PRICE', 'SUPPLY PRICE (-VAT)', 'SUPPLY PRICE(-VAT)', 'Supply Price (KRW/-VAT)', '공급가', '공급가격'],
   // 선택적 필드
   productCode: ['Product Code', '상품코드', '품목코드', 'SKU', 'Code'],
   volume: ['Volume', '용량', 'Size', 'Capacity', 'ml', 'ML'],
-  shelfLife: ['Shelf Life', 'Shelf Life (Month)', '유통기한'],
-  boxQty: ['QTY per Shipping box', 'Qty per inbox', 'Qty per outbox', "Q'ty", '박스수량', 'Box Qty', '입수'],
-  imageUrl: ['SKU Image', 'SKU image', 'Image', 'image', '이미지', '제품이미지', 'Product Image'],
+  shelfLife: ['Shelf Life', 'Shelf Life (Month)', 'Shelf Life(Month)', '유통기한'],
+  boxQty: ['QTY per Shipping box', 'QTY per Shipping box (EA)', 'Qty per inbox', 'Qty per outbox', "Q'ty", '박스수량', 'Box Qty', '입수'],
+  imageUrl: ['SKU Image', 'SKU image', 'Product Image', 'Image', 'image', '이미지', '제품이미지'],
 };
 
+// 컬럼명 정규화 (줄바꿈, 여러 공백 제거)
+function normalizeHeader(header: string): string {
+  return header.replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
 function findField(header: string): string | null {
-  const normalizedHeader = header.trim().toLowerCase();
+  const normalizedHeader = normalizeHeader(header).toLowerCase();
   for (const [field, aliases] of Object.entries(COLUMN_MAPPINGS)) {
     for (const alias of aliases) {
-      if (normalizedHeader === alias.toLowerCase() ||
-          normalizedHeader.includes(alias.toLowerCase()) ||
-          alias.toLowerCase().includes(normalizedHeader)) {
+      const normalizedAlias = alias.toLowerCase();
+      if (normalizedHeader === normalizedAlias ||
+          normalizedHeader.includes(normalizedAlias) ||
+          normalizedAlias.includes(normalizedHeader)) {
         return field;
       }
     }
