@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
       include: includeProducts ? {
         products: {
           where: { isActive: true },
-          orderBy: { name: 'asc' }
+          orderBy: { nameKr: 'asc' }
         },
         _count: { select: { products: true } }
       } : {
