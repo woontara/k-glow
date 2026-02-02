@@ -26,21 +26,19 @@ interface ColumnAnalysis {
   sampleValues: unknown[];
 }
 
-// 컬럼명 매핑
+// 컬럼명 매핑 (업체별 다양한 형식 지원)
 const COLUMN_MAPPINGS: Record<string, string[]> = {
-  productCode: ['상품코드', '품목코드', 'SKU', 'Code', 'Product Code', '제품코드', 'Item Code', 'No', 'NO', 'no', 'No.'],
-  barcode: ['바코드', 'Barcode', 'EAN', 'UPC', 'JAN'],
-  name: ['상품명', '품명', '제품명', 'Product Name', 'Name', 'Item Name', '품목명', 'Description', 'PRODUCT', 'Product', 'item'],
-  nameEn: ['영문상품명', 'English Name', 'Product Name (EN)', 'Name EN', 'English Product Name'],
-  category: ['카테고리', 'Category', '분류', '대분류', 'Main Category', 'Type'],
-  subCategory: ['서브카테고리', 'Sub Category', '소분류', '중분류', 'Sub-Category'],
-  supplyPrice: ['공급가', '공급가격', 'Supply Price', 'Cost', 'Unit Price', '단가', '원가', 'FOB', 'EXW', 'Price', 'PRICE', '가격'],
-  retailPrice: ['소비자가', '권장소비자가', 'Retail Price', 'MSRP', 'SRP', '판매가', '정가', 'Retail'],
-  volume: ['용량', 'Volume', 'Size', 'Capacity', '사이즈', 'ML', 'ml', 'g', 'G'],
-  weight: ['중량', 'Weight', '무게', 'Net Weight', 'Gross Weight'],
-  unit: ['단위', 'Unit', 'UOM'],
-  minOrderQty: ['최소주문수량', 'MOQ', 'Min Order', 'Minimum Order Qty', '최소수량'],
-  boxQty: ['박스수량', 'Box Qty', 'Carton Qty', '케이스입수', '입수', 'PCS/CTN', 'Inner'],
+  // 핵심 공통 필드
+  barcode: ['바코드', 'Barcode', 'Barcode(Case)', 'Barcode(Pouch)', 'EAN', 'UPC'],
+  nameKr: ['제품명(한글)', 'Product Name(KR)', 'Product Name (KR)', '상품명', '품명', '제품명', '한글명'],
+  nameEn: ['Product Name', 'Product Name(EN)', 'Product Name (EN)', '영문상품명', 'English Name'],
+  msrp: ['MSRP', 'MSRP (KRW)', '소비자가', '권장소비자가', 'Retail Price', 'SRP', '정가'],
+  supplyPrice: ['Supply Price', 'SUPPLY PRICE', 'SUPPLY PRICE (-VAT)', 'Supply Price (KRW/-VAT)', '공급가', '공급가격'],
+  // 선택적 필드
+  productCode: ['Product Code', '상품코드', '품목코드', 'SKU', 'Code'],
+  volume: ['Volume', '용량', 'Size', 'Capacity', 'ml', 'ML'],
+  shelfLife: ['Shelf Life', 'Shelf Life (Month)', '유통기한'],
+  boxQty: ['QTY per Shipping box', 'Qty per inbox', 'Qty per outbox', "Q'ty", '박스수량', 'Box Qty', '입수'],
 };
 
 function findField(header: string): string | null {
@@ -203,11 +201,9 @@ export default function SuppliersPage() {
 
           switch (field) {
             case 'supplyPrice':
-            case 'retailPrice':
-            case 'weight':
+            case 'msrp':
               product[field] = extractNumber(value);
               break;
-            case 'minOrderQty':
             case 'boxQty':
               const num = extractNumber(value);
               product[field] = num ? Math.round(num) : null;
@@ -217,7 +213,7 @@ export default function SuppliersPage() {
           }
         }
 
-        if (product.name && String(product.name).trim()) {
+        if (product.nameKr && String(product.nameKr).trim()) {
           products.push(product);
         }
       }

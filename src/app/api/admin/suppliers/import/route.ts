@@ -40,23 +40,21 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 제품 데이터 변환
+    // 제품 데이터 변환 (공통 필드 중심)
     const productData: Prisma.SupplierProductCreateManyInput[] = products.map((p: Record<string, unknown>) => ({
       supplierId: supplier.id,
-      productCode: p.productCode ? String(p.productCode) : null,
+      // 핵심 공통 필드
       barcode: p.barcode ? String(p.barcode) : null,
-      name: String(p.name || ''),
+      nameKr: String(p.nameKr || ''),
       nameEn: p.nameEn ? String(p.nameEn) : null,
-      category: p.category ? String(p.category) : null,
-      subCategory: p.subCategory ? String(p.subCategory) : null,
+      msrp: typeof p.msrp === 'number' ? p.msrp : null,
       supplyPrice: typeof p.supplyPrice === 'number' ? p.supplyPrice : null,
-      retailPrice: typeof p.retailPrice === 'number' ? p.retailPrice : null,
+      // 선택적 필드
+      productCode: p.productCode ? String(p.productCode) : null,
       volume: p.volume ? String(p.volume) : null,
-      weight: typeof p.weight === 'number' ? p.weight : null,
-      unit: p.unit ? String(p.unit) : null,
-      minOrderQty: typeof p.minOrderQty === 'number' ? Math.round(p.minOrderQty) : null,
+      shelfLife: p.shelfLife ? String(p.shelfLife) : null,
       boxQty: typeof p.boxQty === 'number' ? Math.round(p.boxQty) : null,
-      imageUrl: p.imageUrl ? String(p.imageUrl) : null,
+      // 원본 데이터
       rawData: p.rawData as Prisma.InputJsonValue || {}
     }));
 

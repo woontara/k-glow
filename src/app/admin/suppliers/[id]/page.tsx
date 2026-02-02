@@ -21,20 +21,15 @@ interface Supplier {
 
 interface SupplierProduct {
   id: string;
-  productCode: string | null;
   barcode: string | null;
-  name: string;
+  nameKr: string;
   nameEn: string | null;
-  category: string | null;
-  subCategory: string | null;
+  msrp: number | null;
   supplyPrice: number | null;
-  retailPrice: number | null;
-  currency: string;
+  productCode: string | null;
   volume: string | null;
-  weight: number | null;
-  minOrderQty: number | null;
+  shelfLife: string | null;
   boxQty: number | null;
-  imageUrl: string | null;
   rawData: Record<string, unknown>;
 }
 
@@ -156,11 +151,11 @@ export default function SupplierDetailPage() {
     }
   };
 
-  const formatPrice = (price: number | null, currency: string) => {
+  const formatPrice = (price: number | null) => {
     if (price === null) return '-';
     return new Intl.NumberFormat('ko-KR', {
       style: 'currency',
-      currency: currency === 'KRW' ? 'KRW' : 'USD',
+      currency: 'KRW',
       maximumFractionDigits: 0
     }).format(price);
   };
@@ -269,13 +264,12 @@ export default function SupplierDetailPage() {
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">코드</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">바코드</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">상품명</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">카테고리</th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">공급가</th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">소비자가</th>
                     <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">용량</th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">MOQ</th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">박스수량</th>
                     <th className="px-4 py-3"></th>
                   </tr>
                 </thead>
@@ -283,29 +277,25 @@ export default function SupplierDetailPage() {
                   {products.map((product) => (
                     <tr key={product.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3 text-sm text-gray-500 font-mono">
-                        {product.productCode || '-'}
+                        {product.barcode || '-'}
                       </td>
                       <td className="px-4 py-3">
-                        <div className="text-sm font-medium text-gray-900">{product.name}</div>
+                        <div className="text-sm font-medium text-gray-900">{product.nameKr}</div>
                         {product.nameEn && (
                           <div className="text-xs text-gray-500">{product.nameEn}</div>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-500">
-                        {product.category || '-'}
-                        {product.subCategory && ` > ${product.subCategory}`}
-                      </td>
                       <td className="px-4 py-3 text-sm text-right font-medium">
-                        {formatPrice(product.supplyPrice, product.currency)}
+                        {formatPrice(product.supplyPrice)}
                       </td>
                       <td className="px-4 py-3 text-sm text-right text-gray-500">
-                        {formatPrice(product.retailPrice, product.currency)}
+                        {formatPrice(product.msrp)}
                       </td>
                       <td className="px-4 py-3 text-sm text-center text-gray-500">
                         {product.volume || '-'}
                       </td>
                       <td className="px-4 py-3 text-sm text-center text-gray-500">
-                        {product.minOrderQty || '-'}
+                        {product.boxQty || '-'}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <button
@@ -358,7 +348,7 @@ export default function SupplierDetailPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-200">
-              <h2 className="text-xl font-semibold">{selectedProduct.name}</h2>
+              <h2 className="text-xl font-semibold">{selectedProduct.nameKr}</h2>
               {selectedProduct.nameEn && (
                 <p className="text-gray-500">{selectedProduct.nameEn}</p>
               )}
@@ -367,32 +357,28 @@ export default function SupplierDetailPage() {
             <div className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm text-gray-500">상품 코드</label>
-                  <p className="font-medium">{selectedProduct.productCode || '-'}</p>
-                </div>
-                <div>
                   <label className="text-sm text-gray-500">바코드</label>
                   <p className="font-medium font-mono">{selectedProduct.barcode || '-'}</p>
                 </div>
                 <div>
-                  <label className="text-sm text-gray-500">공급가</label>
-                  <p className="font-medium text-lg">{formatPrice(selectedProduct.supplyPrice, selectedProduct.currency)}</p>
+                  <label className="text-sm text-gray-500">상품 코드</label>
+                  <p className="font-medium">{selectedProduct.productCode || '-'}</p>
                 </div>
                 <div>
-                  <label className="text-sm text-gray-500">소비자가</label>
-                  <p className="font-medium">{formatPrice(selectedProduct.retailPrice, selectedProduct.currency)}</p>
+                  <label className="text-sm text-gray-500">공급가</label>
+                  <p className="font-medium text-lg text-pink-600">{formatPrice(selectedProduct.supplyPrice)}</p>
+                </div>
+                <div>
+                  <label className="text-sm text-gray-500">소비자가 (MSRP)</label>
+                  <p className="font-medium">{formatPrice(selectedProduct.msrp)}</p>
                 </div>
                 <div>
                   <label className="text-sm text-gray-500">용량</label>
                   <p className="font-medium">{selectedProduct.volume || '-'}</p>
                 </div>
                 <div>
-                  <label className="text-sm text-gray-500">중량</label>
-                  <p className="font-medium">{selectedProduct.weight ? `${selectedProduct.weight}g` : '-'}</p>
-                </div>
-                <div>
-                  <label className="text-sm text-gray-500">최소 주문량</label>
-                  <p className="font-medium">{selectedProduct.minOrderQty || '-'}</p>
+                  <label className="text-sm text-gray-500">유통기한</label>
+                  <p className="font-medium">{selectedProduct.shelfLife || '-'}</p>
                 </div>
                 <div>
                   <label className="text-sm text-gray-500">박스 수량</label>

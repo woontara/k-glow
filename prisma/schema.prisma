@@ -551,40 +551,29 @@ model SupplierProduct {
   supplierId   String
   supplier     Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
 
-  // 기본 정보
-  productCode  String?  // 상품코드
-  barcode      String?  // 바코드
-  name         String   // 상품명
-  nameEn       String?  // 영문 상품명
-  category     String?  // 카테고리
-  subCategory  String?  // 서브 카테고리
+  // 핵심 공통 필드
+  barcode      String?  // 바코드 (모든 업체 공통)
+  nameKr       String   // 한글 제품명 (모든 업체 공통)
+  nameEn       String?  // 영문 제품명 (모든 업체 공통)
+  msrp         Float?   // 권장소비자가 (모든 업체 공통)
+  supplyPrice  Float?   // 공급가 (모든 업체 공통)
 
-  // 가격 정보
-  supplyPrice  Float?   // 공급가 (VAT 제외)
-  retailPrice  Float?   // 권장 소비자가
-  currency     String   @default("KRW")  // 통화
-
-  // 제품 상세
-  volume       String?  // 용량 (예: "50ml", "100g")
-  weight       Float?   // 중량 (g)
-  unit         String?  // 단위
-  minOrderQty  Int?     // 최소 주문 수량
+  // 선택적 필드 (일부 업체만)
+  productCode  String?  // 제품코드 (BEPLAIN)
+  volume       String?  // 용량 (ABIB)
+  shelfLife    String?  // 유통기한 (BEPLAIN, ABIB)
   boxQty       Int?     // 박스당 수량
 
-  // 이미지
-  imageUrl     String?  // 대표 이미지
-  imageUrls    Json?    // 추가 이미지들
-
-  // 원본 데이터
+  // 원본 데이터 (업체별 모든 컬럼 저장)
   rawData      Json     // 원본 엑셀 행 데이터 전체
 
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  @@unique([supplierId, productCode])
+  @@unique([supplierId, barcode])
   @@index([supplierId])
-  @@index([name])
+  @@index([nameKr])
   @@index([barcode])
   @@index([isActive])
   @@map("supplier_products")

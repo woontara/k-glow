@@ -27,13 +27,14 @@ export async function GET(
           isActive: true,
           ...(search ? {
             OR: [
-              { name: { contains: search, mode: 'insensitive' } },
+              { nameKr: { contains: search, mode: 'insensitive' } },
+              { nameEn: { contains: search, mode: 'insensitive' } },
               { productCode: { contains: search, mode: 'insensitive' } },
               { barcode: { contains: search, mode: 'insensitive' } },
             ]
           } : {})
         },
-        orderBy: { name: 'asc' },
+        orderBy: { nameKr: 'asc' },
         skip,
         take: limit
       }),
@@ -43,7 +44,8 @@ export async function GET(
           isActive: true,
           ...(search ? {
             OR: [
-              { name: { contains: search, mode: 'insensitive' } },
+              { nameKr: { contains: search, mode: 'insensitive' } },
+              { nameEn: { contains: search, mode: 'insensitive' } },
               { productCode: { contains: search, mode: 'insensitive' } },
               { barcode: { contains: search, mode: 'insensitive' } },
             ]
