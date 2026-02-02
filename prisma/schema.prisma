@@ -525,3 +525,67 @@ enum CreditLogType {
   REFUND          // 환불
   ADMIN_ADJUST    // 관리자 조정
 }
+
+// 공급업체 (한국 화장품 공급업체)
+model Supplier {
+  id          String            @id @default(cuid())
+  name        String            @unique  // 공급업체명 (예: TIRTIR, BEPLAIN, ABIB)
+  contactName String?           // 담당자명
+  contactEmail String?          // 담당자 이메일
+  contactPhone String?          // 담당자 연락처
+  website     String?           // 웹사이트
+  notes       String?           // 메모
+  isActive    Boolean           @default(true)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  products    SupplierProduct[]
+
+  @@index([isActive])
+  @@map("suppliers")
+}
+
+// 공급업체 제품 (가격표 데이터)
+model SupplierProduct {
+  id           String   @id @default(cuid())
+  supplierId   String
+  supplier     Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  // 기본 정보
+  productCode  String?  // 상품코드
+  barcode      String?  // 바코드
+  name         String   // 상품명
+  nameEn       String?  // 영문 상품명
+  category     String?  // 카테고리
+  subCategory  String?  // 서브 카테고리
+
+  // 가격 정보
+  supplyPrice  Float?   // 공급가 (VAT 제외)
+  retailPrice  Float?   // 권장 소비자가
+  currency     String   @default("KRW")  // 통화
+
+  // 제품 상세
+  volume       String?  // 용량 (예: "50ml", "100g")
+  weight       Float?   // 중량 (g)
+  unit         String?  // 단위
+  minOrderQty  Int?     // 최소 주문 수량
+  boxQty       Int?     // 박스당 수량
+
+  // 이미지
+  imageUrl     String?  // 대표 이미지
+  imageUrls    Json?    // 추가 이미지들
+
+  // 원본 데이터
+  rawData      Json     // 원본 엑셀 행 데이터 전체
+
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([supplierId, productCode])
+  @@index([supplierId])
+  @@index([name])
+  @@index([barcode])
+  @@index([isActive])
+  @@map("supplier_products")
+}

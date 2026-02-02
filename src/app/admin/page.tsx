@@ -15,6 +15,21 @@ export default async function AdminPage() {
       {/* 관리 메뉴 */}
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
         <Link
+          href="/admin/suppliers"
+          className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md hover:border-pink-400 transition-all group"
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-pink-500 to-pink-600 rounded-lg flex items-center justify-center text-white text-2xl">
+              📦
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900 group-hover:text-pink-600">공급업체 관리</h2>
+              <p className="text-sm text-gray-500">화장품 공급업체 및 제품 리스트</p>
+            </div>
+          </div>
+        </Link>
+
+        <Link
           href="/admin/brands"
           className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md hover:border-amber-400 transition-all group"
         >
