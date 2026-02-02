@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 
 interface Supplier {
   id: string;
@@ -119,6 +120,15 @@ export default function SuppliersPage() {
     fetchSuppliers();
   }, [fetchSuppliers]);
 
+  // 이미지를 Base64 Data URL로 변환
+  const imageToDataUrl = (buffer: ArrayBuffer, extension: string): string => {
+    const base64 = btoa(
+      new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+    );
+    const mimeType = extension === 'png' ? 'image/png' : 'image/jpeg';
+    return `data:${mimeType};base64,${base64}`;
+  };
+
   // 클라이언트에서 Excel 파싱
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -137,15 +147,41 @@ export default function SuppliersPage() {
 
     try {
       const buffer = await file.arrayBuffer();
-      const workbook = XLSX.read(buffer, { type: 'array' });
-      const sheetName = workbook.SheetNames[0];
-      const sheet = workbook.Sheets[sheetName];
+
+      // 1. xlsx로 데이터 파싱
+      const xlsxWorkbook = XLSX.read(buffer, { type: 'array' });
+      const sheetName = xlsxWorkbook.SheetNames[0];
+      const sheet = xlsxWorkbook.Sheets[sheetName];
       const rawData = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' }) as unknown[][];
 
       if (rawData.length < 2) {
         setUploadResult({ success: false, message: '데이터가 없습니다' });
         setParsing(false);
         return;
+      }
+
+      // 2. exceljs로 이미지 추출
+      const imageMap = new Map<number, string>(); // row -> image data URL
+      try {
+        const excelWorkbook = new ExcelJS.Workbook();
+        await excelWorkbook.xlsx.load(buffer);
+        const worksheet = excelWorkbook.worksheets[0];
+
+        if (worksheet) {
+          const images = worksheet.getImages();
+          for (const image of images) {
+            const img = excelWorkbook.getImage(Number(image.imageId));
+            if (img && img.buffer && image.range) {
+              // 이미지가 위치한 행 (tl = top-left)
+              const row = image.range.tl.row;
+              const dataUrl = imageToDataUrl(img.buffer as ArrayBuffer, img.extension || 'png');
+              imageMap.set(Math.floor(row), dataUrl);
+            }
+          }
+        }
+        console.log(`이미지 ${imageMap.size}개 추출됨`);
+      } catch (imgError) {
+        console.warn('이미지 추출 실패 (계속 진행):', imgError);
       }
 
       // 헤더 행 찾기
@@ -221,10 +257,20 @@ export default function SuppliersPage() {
           }
         }
 
+        // 임베딩 이미지가 있으면 추가 (ExcelJS는 0-based, 실제 Excel 행 = headerRowIndex + 1 + rowIdx)
+        const excelRow = headerRowIndex + 1 + rowIdx;
+        if (!product.imageUrl && imageMap.has(excelRow)) {
+          product.imageUrl = imageMap.get(excelRow);
+        }
+
         if (product.nameKr && String(product.nameKr).trim()) {
           products.push(product);
         }
       }
+
+      // 이미지가 있는 제품 수 표시
+      const productsWithImages = products.filter(p => p.imageUrl).length;
+      console.log(`이미지가 있는 제품: ${productsWithImages}개`);
 
       setParsedData({
         headers: headers.filter(h => h),
@@ -509,6 +555,7 @@ export default function SuppliersPage() {
                   <div className="space-y-2 text-sm">
                     <p>총 데이터 행: <span className="font-semibold">{parsedData.totalRows}개</span></p>
                     <p>유효 상품: <span className="font-semibold text-pink-600">{parsedData.products.length}개</span></p>
+                    <p>이미지 포함: <span className="font-semibold text-blue-600">{parsedData.products.filter(p => p.imageUrl).length}개</span></p>
                     <p>인식된 컬럼:</p>
                     <div className="flex flex-wrap gap-2 mt-1">
                       {parsedData.columnAnalysis.map((col, idx) => (
