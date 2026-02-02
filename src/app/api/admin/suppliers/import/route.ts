@@ -54,6 +54,7 @@ export async function POST(request: NextRequest) {
       volume: p.volume ? String(p.volume) : null,
       shelfLife: p.shelfLife ? String(p.shelfLife) : null,
       boxQty: typeof p.boxQty === 'number' ? Math.round(p.boxQty) : null,
+      imageUrl: p.imageUrl ? String(p.imageUrl) : null,
       // 원본 데이터
       rawData: p.rawData as Prisma.InputJsonValue || {}
     }));

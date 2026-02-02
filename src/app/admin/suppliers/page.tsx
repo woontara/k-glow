@@ -39,6 +39,7 @@ const COLUMN_MAPPINGS: Record<string, string[]> = {
   volume: ['Volume', '용량', 'Size', 'Capacity', 'ml', 'ML'],
   shelfLife: ['Shelf Life', 'Shelf Life (Month)', '유통기한'],
   boxQty: ['QTY per Shipping box', 'Qty per inbox', 'Qty per outbox', "Q'ty", '박스수량', 'Box Qty', '입수'],
+  imageUrl: ['SKU Image', 'SKU image', 'Image', 'image', '이미지', '제품이미지', 'Product Image'],
 };
 
 function findField(header: string): string | null {
@@ -183,7 +184,8 @@ export default function SuppliersPage() {
 
       // 제품 데이터 파싱
       const products: Record<string, unknown>[] = [];
-      for (const row of dataRows) {
+      for (let rowIdx = 0; rowIdx < dataRows.length; rowIdx++) {
+        const row = dataRows[rowIdx];
         if (!row || row.every(cell => cell === '')) continue;
 
         const rawRowData: Record<string, unknown> = {};
@@ -207,6 +209,12 @@ export default function SuppliersPage() {
             case 'boxQty':
               const num = extractNumber(value);
               product[field] = num ? Math.round(num) : null;
+              break;
+            case 'imageUrl':
+              // URL 문자열인 경우
+              if (typeof value === 'string' && value.startsWith('http')) {
+                product[field] = value.trim();
+              }
               break;
             default:
               product[field] = String(value).trim();

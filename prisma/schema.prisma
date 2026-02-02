@@ -563,6 +563,7 @@ model SupplierProduct {
   volume       String?  // 용량 (ABIB)
   shelfLife    String?  // 유통기한 (BEPLAIN, ABIB)
   boxQty       Int?     // 박스당 수량
+  imageUrl     String?  // 제품 이미지 URL
 
   // 원본 데이터 (업체별 모든 컬럼 저장)
   rawData      Json     // 원본 엑셀 행 데이터 전체

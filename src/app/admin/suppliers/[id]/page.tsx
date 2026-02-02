@@ -30,6 +30,7 @@ interface SupplierProduct {
   volume: string | null;
   shelfLife: string | null;
   boxQty: number | null;
+  imageUrl: string | null;
   rawData: Record<string, unknown>;
 }
 
@@ -264,6 +265,7 @@ export default function SupplierDetailPage() {
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-16">이미지</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">바코드</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">상품명</th>
                     <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">공급가</th>
@@ -276,6 +278,24 @@ export default function SupplierDetailPage() {
                 <tbody className="divide-y divide-gray-200">
                   {products.map((product) => (
                     <tr key={product.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 text-center">
+                        {product.imageUrl ? (
+                          <img
+                            src={product.imageUrl}
+                            alt={product.nameKr}
+                            className="w-12 h-12 object-contain mx-auto rounded"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none';
+                            }}
+                          />
+                        ) : (
+                          <div className="w-12 h-12 bg-gray-100 rounded flex items-center justify-center mx-auto">
+                            <svg className="w-6 h-6 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                          </div>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-sm text-gray-500 font-mono">
                         {product.barcode || '-'}
                       </td>
@@ -355,6 +375,17 @@ export default function SupplierDetailPage() {
             </div>
 
             <div className="p-6 space-y-4">
+              {/* 제품 이미지 */}
+              {selectedProduct.imageUrl && (
+                <div className="flex justify-center mb-4">
+                  <img
+                    src={selectedProduct.imageUrl}
+                    alt={selectedProduct.nameKr}
+                    className="max-w-48 max-h-48 object-contain rounded-lg border border-gray-200"
+                  />
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm text-gray-500">바코드</label>
