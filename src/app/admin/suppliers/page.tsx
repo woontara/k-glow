@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import * as XLSX from 'xlsx';
 
 interface Supplier {
   id: string;
@@ -25,11 +26,43 @@ interface ColumnAnalysis {
   sampleValues: unknown[];
 }
 
-interface UploadPreview {
-  headers: string[];
-  columnAnalysis: ColumnAnalysis[];
-  totalRows: number;
-  sampleData: unknown[][];
+// 컬럼명 매핑
+const COLUMN_MAPPINGS: Record<string, string[]> = {
+  productCode: ['상품코드', '품목코드', 'SKU', 'Code', 'Product Code', '제품코드', 'Item Code', 'No', 'NO', 'no', 'No.'],
+  barcode: ['바코드', 'Barcode', 'EAN', 'UPC', 'JAN'],
+  name: ['상품명', '품명', '제품명', 'Product Name', 'Name', 'Item Name', '품목명', 'Description', 'PRODUCT', 'Product', 'item'],
+  nameEn: ['영문상품명', 'English Name', 'Product Name (EN)', 'Name EN', 'English Product Name'],
+  category: ['카테고리', 'Category', '분류', '대분류', 'Main Category', 'Type'],
+  subCategory: ['서브카테고리', 'Sub Category', '소분류', '중분류', 'Sub-Category'],
+  supplyPrice: ['공급가', '공급가격', 'Supply Price', 'Cost', 'Unit Price', '단가', '원가', 'FOB', 'EXW', 'Price', 'PRICE', '가격'],
+  retailPrice: ['소비자가', '권장소비자가', 'Retail Price', 'MSRP', 'SRP', '판매가', '정가', 'Retail'],
+  volume: ['용량', 'Volume', 'Size', 'Capacity', '사이즈', 'ML', 'ml', 'g', 'G'],
+  weight: ['중량', 'Weight', '무게', 'Net Weight', 'Gross Weight'],
+  unit: ['단위', 'Unit', 'UOM'],
+  minOrderQty: ['최소주문수량', 'MOQ', 'Min Order', 'Minimum Order Qty', '최소수량'],
+  boxQty: ['박스수량', 'Box Qty', 'Carton Qty', '케이스입수', '입수', 'PCS/CTN', 'Inner'],
+};
+
+function findField(header: string): string | null {
+  const normalizedHeader = header.trim().toLowerCase();
+  for (const [field, aliases] of Object.entries(COLUMN_MAPPINGS)) {
+    for (const alias of aliases) {
+      if (normalizedHeader === alias.toLowerCase() ||
+          normalizedHeader.includes(alias.toLowerCase()) ||
+          alias.toLowerCase().includes(normalizedHeader)) {
+        return field;
+      }
+    }
+  }
+  return null;
+}
+
+function extractNumber(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') return null;
+  if (typeof value === 'number') return value;
+  const str = String(value).replace(/[,\s₩$￦원]/g, '');
+  const num = parseFloat(str);
+  return isNaN(num) ? null : num;
 }
 
 export default function SuppliersPage() {
@@ -39,11 +72,16 @@ export default function SuppliersPage() {
 
   // 업로드 모달 상태
   const [showUploadModal, setShowUploadModal] = useState(false);
-  const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [supplierName, setSupplierName] = useState('');
   const [replaceExisting, setReplaceExisting] = useState(false);
-  const [uploadPreview, setUploadPreview] = useState<UploadPreview | null>(null);
+  const [parsedData, setParsedData] = useState<{
+    headers: string[];
+    columnAnalysis: ColumnAnalysis[];
+    totalRows: number;
+    products: Record<string, unknown>[];
+  } | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [parsing, setParsing] = useState(false);
   const [uploadResult, setUploadResult] = useState<{
     success: boolean;
     message: string;
@@ -82,57 +120,139 @@ export default function SuppliersPage() {
     fetchSuppliers();
   }, [fetchSuppliers]);
 
-  // 파일 선택 시 미리보기
+  // 클라이언트에서 Excel 파싱
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setUploadFile(file);
-    setUploadPreview(null);
+    setParsing(true);
+    setParsedData(null);
     setUploadResult(null);
 
-    // 파일명에서 공급업체명 추출 시도
+    // 파일명에서 공급업체명 추출
     const fileName = file.name.replace(/\.(xlsx|xls)$/i, '');
     const brandMatch = fileName.match(/^([A-Za-z]+)/);
     if (brandMatch) {
       setSupplierName(brandMatch[1].toUpperCase());
     }
 
-    // 미리보기 요청
-    const formData = new FormData();
-    formData.append('file', file);
-
     try {
-      const response = await fetch('/api/admin/suppliers/upload', {
-        method: 'PUT',
-        body: formData
+      const buffer = await file.arrayBuffer();
+      const workbook = XLSX.read(buffer, { type: 'array' });
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      const rawData = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' }) as unknown[][];
+
+      if (rawData.length < 2) {
+        setUploadResult({ success: false, message: '데이터가 없습니다' });
+        setParsing(false);
+        return;
+      }
+
+      // 헤더 행 찾기
+      let headerRowIndex = 0;
+      for (let i = 0; i < Math.min(10, rawData.length); i++) {
+        const row = rawData[i];
+        const nonEmptyCount = row.filter(cell => cell !== '').length;
+        if (nonEmptyCount >= 3) {
+          headerRowIndex = i;
+          break;
+        }
+      }
+
+      const headers = (rawData[headerRowIndex] as string[]).map(h => String(h || ''));
+      const dataRows = rawData.slice(headerRowIndex + 1);
+
+      // 컬럼 매핑
+      const columnMapping: Record<number, string> = {};
+      headers.forEach((header, index) => {
+        if (header) {
+          const field = findField(header);
+          if (field) {
+            columnMapping[index] = field;
+          }
+        }
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setUploadPreview(data);
+      // 컬럼 분석
+      const sampleRows = dataRows.slice(0, 5);
+      const columnAnalysis: ColumnAnalysis[] = headers.map((header, index) => ({
+        index,
+        original: header,
+        mappedTo: header ? findField(header) : null,
+        sampleValues: sampleRows.map(row => row[index]).filter(v => v !== '')
+      })).filter(col => col.original);
+
+      // 제품 데이터 파싱
+      const products: Record<string, unknown>[] = [];
+      for (const row of dataRows) {
+        if (!row || row.every(cell => cell === '')) continue;
+
+        const rawRowData: Record<string, unknown> = {};
+        headers.forEach((header, index) => {
+          if (header && row[index] !== undefined) {
+            rawRowData[header] = row[index];
+          }
+        });
+
+        const product: Record<string, unknown> = { rawData: rawRowData };
+
+        for (const [colIndex, field] of Object.entries(columnMapping)) {
+          const value = row[parseInt(colIndex)];
+          if (value === null || value === undefined || value === '') continue;
+
+          switch (field) {
+            case 'supplyPrice':
+            case 'retailPrice':
+            case 'weight':
+              product[field] = extractNumber(value);
+              break;
+            case 'minOrderQty':
+            case 'boxQty':
+              const num = extractNumber(value);
+              product[field] = num ? Math.round(num) : null;
+              break;
+            default:
+              product[field] = String(value).trim();
+          }
+        }
+
+        if (product.name && String(product.name).trim()) {
+          products.push(product);
+        }
       }
+
+      setParsedData({
+        headers: headers.filter(h => h),
+        columnAnalysis,
+        totalRows: dataRows.length,
+        products
+      });
+
     } catch (error) {
-      console.error('파일 분석 실패:', error);
+      console.error('파일 파싱 실패:', error);
+      setUploadResult({ success: false, message: '파일 파싱에 실패했습니다' });
+    } finally {
+      setParsing(false);
     }
   };
 
-  // 업로드 실행
+  // 서버에 데이터 전송
   const handleUpload = async () => {
-    if (!uploadFile || !supplierName) return;
+    if (!parsedData || !supplierName) return;
 
     setUploading(true);
     setUploadResult(null);
 
-    const formData = new FormData();
-    formData.append('file', uploadFile);
-    formData.append('supplierName', supplierName);
-    formData.append('replaceExisting', String(replaceExisting));
-
     try {
-      const response = await fetch('/api/admin/suppliers/upload', {
+      const response = await fetch('/api/admin/suppliers/import', {
         method: 'POST',
-        body: formData
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          supplierName,
+          replaceExisting,
+          products: parsedData.products
+        })
       });
 
       const data = await response.json();
@@ -208,10 +328,9 @@ export default function SuppliersPage() {
 
   const closeUploadModal = () => {
     setShowUploadModal(false);
-    setUploadFile(null);
     setSupplierName('');
     setReplaceExisting(false);
-    setUploadPreview(null);
+    setParsedData(null);
     setUploadResult(null);
   };
 
@@ -331,7 +450,7 @@ export default function SuppliersPage() {
           <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-200">
               <h2 className="text-xl font-semibold">제품 리스트 업로드</h2>
-              <p className="text-sm text-gray-500 mt-1">Excel 파일을 업로드하여 제품 데이터를 등록합니다</p>
+              <p className="text-sm text-gray-500 mt-1">Excel 파일을 선택하면 자동으로 분석됩니다</p>
             </div>
 
             <div className="p-6 space-y-6">
@@ -346,6 +465,9 @@ export default function SuppliersPage() {
                   onChange={handleFileChange}
                   className="w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-pink-400 transition-colors cursor-pointer"
                 />
+                {parsing && (
+                  <p className="mt-2 text-sm text-gray-500">파일 분석 중...</p>
+                )}
               </div>
 
               {/* 공급업체명 입력 */}
@@ -377,14 +499,15 @@ export default function SuppliersPage() {
               </div>
 
               {/* 미리보기 */}
-              {uploadPreview && (
+              {parsedData && (
                 <div className="bg-gray-50 rounded-lg p-4">
                   <h4 className="font-medium text-gray-900 mb-3">파일 분석 결과</h4>
                   <div className="space-y-2 text-sm">
-                    <p>총 데이터 행: <span className="font-semibold">{uploadPreview.totalRows}개</span></p>
+                    <p>총 데이터 행: <span className="font-semibold">{parsedData.totalRows}개</span></p>
+                    <p>유효 상품: <span className="font-semibold text-pink-600">{parsedData.products.length}개</span></p>
                     <p>인식된 컬럼:</p>
                     <div className="flex flex-wrap gap-2 mt-1">
-                      {uploadPreview.columnAnalysis.map((col, idx) => (
+                      {parsedData.columnAnalysis.map((col, idx) => (
                         <span
                           key={idx}
                           className={`px-2 py-1 rounded text-xs ${
@@ -425,10 +548,10 @@ export default function SuppliersPage() {
               </button>
               <button
                 onClick={handleUpload}
-                disabled={!uploadFile || !supplierName || uploading}
+                disabled={!parsedData || !supplierName || uploading}
                 className="px-6 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {uploading ? '업로드 중...' : '업로드'}
+                {uploading ? '업로드 중...' : `${parsedData?.products.length || 0}개 상품 업로드`}
               </button>
             </div>
           </div>
