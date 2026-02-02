@@ -87,7 +87,7 @@ export default function SuppliersPage() {
   const [uploadResult, setUploadResult] = useState<{
     success: boolean;
     message: string;
-    stats?: { totalRows: number; validProducts: number; created: number };
+    stats?: { totalRows: number; created: number; updated: number; skipped: number };
   } | null>(null);
 
   // 공급업체 생성 모달
@@ -645,7 +645,8 @@ export default function SuppliersPage() {
                   <p className="font-medium">{uploadResult.message}</p>
                   {uploadResult.stats && (
                     <p className="text-sm mt-1">
-                      전체 {uploadResult.stats.totalRows}행 중 {uploadResult.stats.validProducts}개 유효, {uploadResult.stats.created}개 등록됨
+                      전체 {uploadResult.stats.totalRows}개 중 신규 {uploadResult.stats.created}개, 업데이트 {uploadResult.stats.updated}개
+                      {uploadResult.stats.skipped > 0 && `, 건너뜀 ${uploadResult.stats.skipped}개`}
                     </p>
                   )}
                 </div>

@@ -40,41 +40,77 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 제품 데이터 변환 (공통 필드 중심)
-    const productData: Prisma.SupplierProductCreateManyInput[] = products.map((p: Record<string, unknown>) => ({
-      supplierId: supplier.id,
-      // 핵심 공통 필드
-      barcode: p.barcode ? String(p.barcode) : null,
-      nameKr: String(p.nameKr || ''),
-      nameEn: p.nameEn ? String(p.nameEn) : null,
-      msrp: typeof p.msrp === 'number' ? p.msrp : null,
-      supplyPrice: typeof p.supplyPrice === 'number' ? p.supplyPrice : null,
-      // 선택적 필드
-      productCode: p.productCode ? String(p.productCode) : null,
-      volume: p.volume ? String(p.volume) : null,
-      shelfLife: p.shelfLife ? String(p.shelfLife) : null,
-      boxQty: typeof p.boxQty === 'number' ? Math.round(p.boxQty) : null,
-      imageUrl: p.imageUrl ? String(p.imageUrl) : null,
-      // 원본 데이터
-      rawData: p.rawData as Prisma.InputJsonValue || {}
-    }));
+    // 중복 체크 및 upsert 처리
+    let createdCount = 0;
+    let updatedCount = 0;
+    let skippedCount = 0;
 
-    // 일괄 저장
-    const created = await prisma.supplierProduct.createMany({
-      data: productData,
-      skipDuplicates: true
-    });
+    for (const p of products) {
+      const barcode = p.barcode ? String(p.barcode) : null;
+      const nameKr = String(p.nameKr || '');
+
+      if (!nameKr.trim()) {
+        skippedCount++;
+        continue;
+      }
+
+      const productData = {
+        barcode,
+        nameKr,
+        nameEn: p.nameEn ? String(p.nameEn) : null,
+        msrp: typeof p.msrp === 'number' ? p.msrp : null,
+        supplyPrice: typeof p.supplyPrice === 'number' ? p.supplyPrice : null,
+        productCode: p.productCode ? String(p.productCode) : null,
+        volume: p.volume ? String(p.volume) : null,
+        shelfLife: p.shelfLife ? String(p.shelfLife) : null,
+        boxQty: typeof p.boxQty === 'number' ? Math.round(p.boxQty) : null,
+        imageUrl: p.imageUrl ? String(p.imageUrl) : null,
+        rawData: p.rawData as Prisma.InputJsonValue || {}
+      };
+
+      // 바코드로 먼저 찾고, 없으면 제품명으로 찾기
+      let existingProduct = null;
+      if (barcode) {
+        existingProduct = await prisma.supplierProduct.findFirst({
+          where: { supplierId: supplier.id, barcode }
+        });
+      }
+      if (!existingProduct) {
+        existingProduct = await prisma.supplierProduct.findFirst({
+          where: { supplierId: supplier.id, nameKr }
+        });
+      }
+
+      if (existingProduct) {
+        // 기존 제품 업데이트
+        await prisma.supplierProduct.update({
+          where: { id: existingProduct.id },
+          data: productData
+        });
+        updatedCount++;
+      } else {
+        // 새 제품 생성
+        await prisma.supplierProduct.create({
+          data: {
+            supplierId: supplier.id,
+            ...productData
+          }
+        });
+        createdCount++;
+      }
+    }
 
     return NextResponse.json({
-      message: `${created.count}개의 상품이 등록되었습니다`,
+      message: `신규 ${createdCount}개, 업데이트 ${updatedCount}개 처리되었습니다`,
       supplier: {
         id: supplier.id,
         name: supplier.name
       },
       stats: {
         totalRows: products.length,
-        validProducts: productData.length,
-        created: created.count
+        created: createdCount,
+        updated: updatedCount,
+        skipped: skippedCount
       }
     });
 
