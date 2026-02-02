@@ -321,7 +321,7 @@ export default function SuppliersPage() {
     try {
       // 1. fal.ai API 키 가져오기
       setUploadProgress('이미지 업로드 준비 중...');
-      const keyResponse = await fetch('/api/ai-tools/key?modelId=fal-ai/birefnet');
+      const keyResponse = await fetch('/api/ai-tools/key?modelId=any');
       if (!keyResponse.ok) {
         throw new Error('이미지 업로드 키를 가져올 수 없습니다');
       }
