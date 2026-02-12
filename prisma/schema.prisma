@@ -540,6 +540,7 @@ model Supplier {
   updatedAt   DateTime          @updatedAt
 
   products    SupplierProduct[]
+  exports     SupplierExport[]
 
   @@index([isActive])
   @@map("suppliers")
@@ -584,4 +585,22 @@ model SupplierProduct {
   @@index([barcode])
   @@index([isActive])
   @@map("supplier_products")
+}
+
+// 공급업체 제품 내보내기 파일
+model SupplierExport {
+  id          String   @id @default(cuid())
+  supplierId  String?  // null이면 전체 브랜드
+  fileUrl     String   // fal.ai 스토리지 URL
+  fileName    String
+  fileSize    Int?     // 파일 크기 (bytes)
+  productCount Int     // 포함된 제품 수
+  includeImages Boolean @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  supplier    Supplier? @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  @@unique([supplierId, includeImages])
+  @@map("supplier_exports")
 }

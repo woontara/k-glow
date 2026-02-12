@@ -109,6 +109,12 @@ export default function SuppliersPage() {
 
   // 내보내기 상태
   const [exporting, setExporting] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [exportInfo, setExportInfo] = useState<{
+    updatedAt: string;
+    productCount: number;
+    fileUrl: string;
+  } | null>(null);
 
   const fetchSuppliers = useCallback(async () => {
     try {
@@ -490,7 +496,38 @@ export default function SuppliersPage() {
     setUploadResult(null);
   };
 
-  // Excel 내보내기
+  // Excel 파일 생성
+  const handleGenerate = async (supplierId?: string, includeImages = false) => {
+    setGenerating(true);
+    try {
+      const response = await fetch('/api/admin/suppliers/export/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          supplierId: supplierId || 'all',
+          includeImages
+        })
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error);
+
+      alert(data.message);
+      // 생성 후 export info 업데이트
+      setExportInfo({
+        updatedAt: data.export.updatedAt,
+        productCount: data.export.productCount,
+        fileUrl: data.export.fileUrl
+      });
+    } catch (error) {
+      console.error('파일 생성 실패:', error);
+      alert('파일 생성에 실패했습니다: ' + (error instanceof Error ? error.message : '알 수 없는 오류'));
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  // Excel 내보내기 (다운로드)
   const handleExport = async (supplierId?: string) => {
     setExporting(true);
     try {
@@ -498,25 +535,28 @@ export default function SuppliersPage() {
       params.append('supplierId', supplierId || 'all');
 
       const response = await fetch(`/api/admin/suppliers/export?${params}`);
-      if (!response.ok) throw new Error('내보내기 실패');
 
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-
-      // Content-Disposition에서 파일명 추출
-      const contentDisposition = response.headers.get('Content-Disposition');
-      let fileName = 'K-Glow_제품목록.xlsx';
-      if (contentDisposition) {
-        const match = contentDisposition.match(/filename\*=UTF-8''(.+)/);
-        if (match) fileName = decodeURIComponent(match[1]);
+      // 파일이 없으면 생성 필요
+      if (response.status === 404) {
+        const data = await response.json();
+        if (data.needGenerate) {
+          if (confirm('내보내기 파일이 없습니다. 지금 생성하시겠습니까?')) {
+            setExporting(false);
+            await handleGenerate(supplierId);
+          }
+          return;
+        }
       }
 
-      a.download = fileName;
+      if (!response.ok) throw new Error('내보내기 실패');
+
+      // 리다이렉트된 URL에서 파일 다운로드
+      const finalUrl = response.url;
+      const a = document.createElement('a');
+      a.href = finalUrl;
+      a.download = '';
       document.body.appendChild(a);
       a.click();
-      window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
     } catch (error) {
       console.error('내보내기 실패:', error);
@@ -535,6 +575,16 @@ export default function SuppliersPage() {
         </div>
         <div className="flex gap-3">
           <button
+            onClick={() => handleGenerate('all')}
+            disabled={generating || suppliers.length === 0}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:opacity-50"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            {generating ? '생성 중...' : 'Excel 생성'}
+          </button>
+          <button
             onClick={() => handleExport('all')}
             disabled={exporting || suppliers.length === 0}
             className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 disabled:opacity-50"
@@ -542,7 +592,7 @@ export default function SuppliersPage() {
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
-            {exporting ? '내보내는 중...' : '전체 Excel 내보내기'}
+            {exporting ? '다운로드 중...' : 'Excel 다운로드'}
           </button>
           <button
             onClick={() => setShowUploadModal(true)}
