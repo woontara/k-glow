@@ -310,7 +310,7 @@ export async function POST(request: NextRequest) {
         : `K-Glow_제품목록_${date}.xlsx`;
 
     // fal.ai 스토리지에 업로드
-    const file = new File([buffer], fileName, {
+    const file = new File([new Uint8Array(buffer)], fileName, {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     });
     const fileUrl = await fal.storage.upload(file);
