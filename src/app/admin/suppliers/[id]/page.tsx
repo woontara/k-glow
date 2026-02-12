@@ -56,6 +56,11 @@ export default function SupplierDetailPage() {
   const [search, setSearch] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<SupplierProduct | null>(null);
 
+  // 이미지 수집 상태
+  const [imageStats, setImageStats] = useState<{ total: number; withImage: number; withoutImage: number; percentage: number } | null>(null);
+  const [fetchingImages, setFetchingImages] = useState(false);
+  const [imageResult, setImageResult] = useState<{ updated: number; failed: number; errors?: string[] } | null>(null);
+
   // 편집 모달
   const [showEditModal, setShowEditModal] = useState(false);
   const [editData, setEditData] = useState({
@@ -110,13 +115,26 @@ export default function SupplierDetailPage() {
     }
   }, [supplierId, search]);
 
+  const fetchImageStats = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/admin/suppliers/${supplierId}/products/fetch-images`);
+      if (response.ok) {
+        const data = await response.json();
+        setImageStats(data);
+      }
+    } catch (error) {
+      console.error('이미지 상태 조회 실패:', error);
+    }
+  }, [supplierId]);
+
   useEffect(() => {
     fetchSupplier();
   }, [fetchSupplier]);
 
   useEffect(() => {
     fetchProducts();
-  }, [fetchProducts]);
+    fetchImageStats();
+  }, [fetchProducts, fetchImageStats]);
 
   const handleUpdateSupplier = async () => {
     try {
@@ -149,6 +167,35 @@ export default function SupplierDetailPage() {
       }
     } catch (error) {
       console.error('제품 삭제 실패:', error);
+    }
+  };
+
+  const handleFetchImages = async () => {
+    if (fetchingImages) return;
+    if (!confirm('이미지가 없는 제품들의 이미지를 네이버 쇼핑에서 검색합니다. 계속하시겠습니까?')) return;
+
+    setFetchingImages(true);
+    setImageResult(null);
+
+    try {
+      const response = await fetch(`/api/admin/suppliers/${supplierId}/products/fetch-images`, {
+        method: 'POST'
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setImageResult({ updated: data.updated, failed: data.failed, errors: data.errors });
+        fetchProducts();
+        fetchImageStats();
+      } else {
+        alert(data.error || '이미지 수집에 실패했습니다');
+      }
+    } catch (error) {
+      console.error('이미지 수집 실패:', error);
+      alert('이미지 수집 중 오류가 발생했습니다');
+    } finally {
+      setFetchingImages(false);
     }
   };
 
@@ -231,7 +278,7 @@ export default function SupplierDetailPage() {
       {/* 제품 목록 */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
         <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold">제품 목록</h2>
             <div className="flex items-center gap-3">
               <input
@@ -251,6 +298,50 @@ export default function SupplierDetailPage() {
               )}
             </div>
           </div>
+
+          {/* 이미지 수집 섹션 */}
+          {imageStats && imageStats.total > 0 && (
+            <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4">
+              <div className="flex items-center gap-4">
+                <div className="text-sm">
+                  <span className="text-gray-600">이미지 현황:</span>
+                  <span className="ml-2 font-medium text-green-600">{imageStats.withImage}개 완료</span>
+                  <span className="mx-1 text-gray-400">/</span>
+                  <span className="font-medium text-orange-600">{imageStats.withoutImage}개 미등록</span>
+                  <span className="ml-2 text-gray-500">({imageStats.percentage}%)</span>
+                </div>
+                {imageResult && (
+                  <div className="text-sm text-blue-600">
+                    최근 수집: {imageResult.updated}개 성공, {imageResult.failed}개 실패
+                  </div>
+                )}
+              </div>
+              {imageStats.withoutImage > 0 && (
+                <button
+                  onClick={handleFetchImages}
+                  disabled={fetchingImages}
+                  className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {fetchingImages ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      이미지 수집 중...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      이미지 자동 수집
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {loading ? (
