@@ -23,8 +23,8 @@ interface ProductWithLogistics {
   vatIncluded?: boolean | null;
 }
 
-// 이미지 URL에서 버퍼로 가져오기
-async function fetchImageAsBuffer(url: string): Promise<{ buffer: Buffer; extension: 'png' | 'jpeg' | 'gif' } | null> {
+// 이미지 URL에서 base64로 가져오기
+async function fetchImageAsBase64(url: string): Promise<{ base64: string; extension: 'png' | 'jpeg' | 'gif' } | null> {
   try {
     const response = await fetch(url, {
       signal: AbortSignal.timeout(5000) // 5초 타임아웃
@@ -37,7 +37,8 @@ async function fetchImageAsBuffer(url: string): Promise<{ buffer: Buffer; extens
     else if (contentType.includes('gif')) extension = 'gif';
 
     const arrayBuffer = await response.arrayBuffer();
-    return { buffer: Buffer.from(arrayBuffer), extension };
+    const base64 = Buffer.from(arrayBuffer).toString('base64');
+    return { base64, extension };
   } catch {
     return null;
   }
@@ -153,10 +154,10 @@ export async function GET(request: NextRequest) {
 
           // 이미지 추가
           if (p.imageUrl) {
-            const imageData = await fetchImageAsBuffer(p.imageUrl);
+            const imageData = await fetchImageAsBase64(p.imageUrl);
             if (imageData) {
               const imageId = workbook.addImage({
-                buffer: imageData.buffer,
+                base64: imageData.base64,
                 extension: imageData.extension,
               });
               worksheet.addImage(imageId, {
@@ -214,10 +215,10 @@ export async function GET(request: NextRequest) {
 
           // 이미지 추가
           if (p.imageUrl) {
-            const imageData = await fetchImageAsBuffer(p.imageUrl);
+            const imageData = await fetchImageAsBase64(p.imageUrl);
             if (imageData) {
               const imageId = workbook.addImage({
-                buffer: imageData.buffer,
+                base64: imageData.base64,
                 extension: imageData.extension,
               });
               worksheet.addImage(imageId, {
