@@ -3,6 +3,26 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import ExcelJS from 'exceljs';
 
+// 제품 타입 (물류 정보 포함)
+interface ProductWithLogistics {
+  id: string;
+  barcode: string | null;
+  nameKr: string;
+  nameEn: string | null;
+  supplyPrice: number | null;
+  msrp: number | null;
+  volume: string | null;
+  shelfLife: string | null;
+  boxQty: number | null;
+  imageUrl: string | null;
+  // 물류 정보
+  itemWeight?: number | null;
+  itemSize?: string | null;
+  boxWeight?: number | null;
+  boxSize?: string | null;
+  vatIncluded?: boolean | null;
+}
+
 // 이미지 URL에서 버퍼로 가져오기
 async function fetchImageAsBuffer(url: string): Promise<{ buffer: Buffer; extension: 'png' | 'jpeg' | 'gif' } | null> {
   try {
@@ -106,7 +126,8 @@ export async function GET(request: NextRequest) {
 
       let rowIndex = 2;
       for (const supplier of suppliers) {
-        for (const p of supplier.products) {
+        for (const product of supplier.products) {
+          const p = product as ProductWithLogistics;
           const row = worksheet.addRow({
             image: '', // 이미지 셀은 비워둠
             brand: supplier.name,
@@ -167,7 +188,8 @@ export async function GET(request: NextRequest) {
         });
 
         let rowIndex = 2;
-        for (const p of supplier.products) {
+        for (const product of supplier.products) {
+          const p = product as ProductWithLogistics;
           const row = worksheet.addRow({
             image: '',
             barcode: p.barcode || '',
