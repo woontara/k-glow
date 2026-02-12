@@ -42,6 +42,13 @@ export async function GET(request: NextRequest) {
     // 워크북 생성
     const workbook = XLSX.utils.book_new();
 
+    // 공급가 계산: 원가 * 1.15, 백원 단위 버림
+    const calculateSupplyPrice = (price: number | null): number | string => {
+      if (!price) return '';
+      const calculated = price * 1.15;
+      return Math.floor(calculated / 100) * 100;
+    };
+
     if (supplierId === 'all') {
       // 모든 브랜드를 하나의 시트에
       const allProducts = suppliers.flatMap(s =>
@@ -51,7 +58,7 @@ export async function GET(request: NextRequest) {
           '제품명(한글)': p.nameKr,
           '제품명(영문)': p.nameEn || '',
           '용량': p.volume || '',
-          '공급가(원)': p.supplyPrice || '',
+          '공급가(원)': calculateSupplyPrice(p.supplyPrice),
           '소비자가(원)': p.msrp || '',
           'VAT포함': p.vatIncluded === true ? 'Y' : p.vatIncluded === false ? 'N' : '',
           '박스수량': p.boxQty || '',
@@ -94,7 +101,7 @@ export async function GET(request: NextRequest) {
           '제품명(한글)': p.nameKr,
           '제품명(영문)': p.nameEn || '',
           '용량': p.volume || '',
-          '공급가(원)': p.supplyPrice || '',
+          '공급가(원)': calculateSupplyPrice(p.supplyPrice),
           '소비자가(원)': p.msrp || '',
           'VAT포함': p.vatIncluded === true ? 'Y' : p.vatIncluded === false ? 'N' : '',
           '박스수량': p.boxQty || '',
