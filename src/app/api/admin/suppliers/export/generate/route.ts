@@ -23,25 +23,59 @@ interface ProductWithLogistics {
   vatIncluded?: boolean | null;
 }
 
-// 이미지 URL에서 base64로 가져오기
-async function fetchImageAsBase64(url: string): Promise<{ base64: string; extension: 'png' | 'jpeg' | 'gif' } | null> {
-  try {
-    const response = await fetch(url, {
-      signal: AbortSignal.timeout(5000)
-    });
-    if (!response.ok) return null;
+// 이미지 URL에서 base64로 가져오기 (재시도 포함)
+async function fetchImageAsBase64(url: string, retries = 2): Promise<{ base64: string; extension: 'png' | 'jpeg' | 'gif' } | null> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const response = await fetch(url, {
+        signal: AbortSignal.timeout(10000), // 10초 타임아웃
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+      });
+      if (!response.ok) continue;
 
-    const contentType = response.headers.get('content-type') || '';
-    let extension: 'png' | 'jpeg' | 'gif' = 'jpeg';
-    if (contentType.includes('png')) extension = 'png';
-    else if (contentType.includes('gif')) extension = 'gif';
+      const contentType = response.headers.get('content-type') || '';
+      let extension: 'png' | 'jpeg' | 'gif' = 'jpeg';
+      if (contentType.includes('png')) extension = 'png';
+      else if (contentType.includes('gif')) extension = 'gif';
 
-    const arrayBuffer = await response.arrayBuffer();
-    const base64 = Buffer.from(arrayBuffer).toString('base64');
-    return { base64, extension };
-  } catch {
-    return null;
+      const arrayBuffer = await response.arrayBuffer();
+      if (arrayBuffer.byteLength < 100) continue; // 너무 작은 파일은 스킵
+
+      const base64 = Buffer.from(arrayBuffer).toString('base64');
+      return { base64, extension };
+    } catch {
+      if (attempt === retries) return null;
+      await new Promise(r => setTimeout(r, 500)); // 재시도 전 대기
+    }
   }
+  return null;
+}
+
+// 이미지 병렬 로딩 (동시 요청 제한)
+async function fetchImagesInParallel(
+  urls: (string | null)[],
+  concurrency = 10
+): Promise<Map<string, { base64: string; extension: 'png' | 'jpeg' | 'gif' }>> {
+  const results = new Map<string, { base64: string; extension: 'png' | 'jpeg' | 'gif' }>();
+  const validUrls = urls.filter((url): url is string => !!url);
+
+  for (let i = 0; i < validUrls.length; i += concurrency) {
+    const batch = validUrls.slice(i, i + concurrency);
+    const batchResults = await Promise.all(
+      batch.map(async (url) => {
+        const data = await fetchImageAsBase64(url);
+        return { url, data };
+      })
+    );
+
+    for (const { url, data } of batchResults) {
+      if (data) results.set(url, data);
+    }
+  }
+
+  return results;
 }
 
 // Excel 파일 생성
@@ -49,8 +83,19 @@ async function generateExcelFile(
   suppliers: Array<{ id: string; name: string; products: ProductWithLogistics[] }>,
   isAll: boolean,
   includeImages: boolean
-): Promise<{ buffer: Buffer; productCount: number }> {
+): Promise<{ buffer: Buffer; productCount: number; imageCount: number }> {
   const workbook = new ExcelJS.Workbook();
+
+  // 이미지를 미리 병렬로 로딩
+  let imageMap = new Map<string, { base64: string; extension: 'png' | 'jpeg' | 'gif' }>();
+  if (includeImages) {
+    const allImageUrls = suppliers.flatMap(s =>
+      s.products.map(p => p.imageUrl)
+    );
+    console.log(`이미지 ${allImageUrls.filter(Boolean).length}개 로딩 시작...`);
+    imageMap = await fetchImagesInParallel(allImageUrls, 15);
+    console.log(`이미지 ${imageMap.size}개 로딩 완료`);
+  }
 
   const calculateSupplyPrice = (price: number | null): number | string => {
     if (!price) return '';
@@ -119,7 +164,7 @@ async function generateExcelFile(
         });
 
         if (includeImages && p.imageUrl) {
-          const imageData = await fetchImageAsBase64(p.imageUrl);
+          const imageData = imageMap.get(p.imageUrl);
           if (imageData) {
             const imageId = workbook.addImage({
               base64: imageData.base64,
@@ -178,7 +223,7 @@ async function generateExcelFile(
         });
 
         if (includeImages && p.imageUrl) {
-          const imageData = await fetchImageAsBase64(p.imageUrl);
+          const imageData = imageMap.get(p.imageUrl);
           if (imageData) {
             const imageId = workbook.addImage({
               base64: imageData.base64,
@@ -198,7 +243,7 @@ async function generateExcelFile(
   }
 
   const buffer = await workbook.xlsx.writeBuffer();
-  return { buffer: Buffer.from(buffer), productCount: totalProducts };
+  return { buffer: Buffer.from(buffer), productCount: totalProducts, imageCount: imageMap.size };
 }
 
 // Export 파일 생성 및 저장
@@ -249,11 +294,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Excel 파일 생성
-    const { buffer, productCount } = await generateExcelFile(
+    const { buffer, productCount, imageCount } = await generateExcelFile(
       suppliers as Array<{ id: string; name: string; products: ProductWithLogistics[] }>,
       isAll,
       includeImages
     );
+    console.log(`Excel 생성 완료: 제품 ${productCount}개, 이미지 ${imageCount}개`);
 
     // 파일명 생성
     const date = new Date().toISOString().split('T')[0];
@@ -296,7 +342,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: `${productCount}개 제품 내보내기 파일 생성 완료`,
+      message: includeImages
+        ? `${productCount}개 제품, ${imageCount}개 이미지 내보내기 파일 생성 완료`
+        : `${productCount}개 제품 내보내기 파일 생성 완료`,
       export: exportRecord
     });
 
