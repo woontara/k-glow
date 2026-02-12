@@ -214,7 +214,7 @@ export async function POST(request: NextRequest) {
   try {
     // fal.ai API 키 가져오기
     const aiModel = await prisma.aiModel.findFirst({
-      where: { provider: 'fal' }
+      where: { apiKey: { not: null } }
     });
     if (!aiModel?.apiKey) {
       return NextResponse.json({ error: 'fal.ai API 키가 설정되지 않았습니다' }, { status: 500 });
