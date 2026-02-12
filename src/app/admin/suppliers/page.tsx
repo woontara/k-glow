@@ -107,6 +107,9 @@ export default function SuppliersPage() {
     notes: ''
   });
 
+  // 내보내기 상태
+  const [exporting, setExporting] = useState(false);
+
   const fetchSuppliers = useCallback(async () => {
     try {
       const params = new URLSearchParams();
@@ -487,6 +490,42 @@ export default function SuppliersPage() {
     setUploadResult(null);
   };
 
+  // Excel 내보내기
+  const handleExport = async (supplierId?: string) => {
+    setExporting(true);
+    try {
+      const params = new URLSearchParams();
+      params.append('supplierId', supplierId || 'all');
+
+      const response = await fetch(`/api/admin/suppliers/export?${params}`);
+      if (!response.ok) throw new Error('내보내기 실패');
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+
+      // Content-Disposition에서 파일명 추출
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let fileName = 'K-Glow_제품목록.xlsx';
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename\*=UTF-8''(.+)/);
+        if (match) fileName = decodeURIComponent(match[1]);
+      }
+
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('내보내기 실패:', error);
+      alert('내보내기에 실패했습니다');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-8">
@@ -495,6 +534,16 @@ export default function SuppliersPage() {
           <p className="text-gray-600">한국 화장품 공급업체 및 제품 리스트를 관리합니다</p>
         </div>
         <div className="flex gap-3">
+          <button
+            onClick={() => handleExport('all')}
+            disabled={exporting || suppliers.length === 0}
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 disabled:opacity-50"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            {exporting ? '내보내는 중...' : '전체 Excel 내보내기'}
+          </button>
           <button
             onClick={() => setShowUploadModal(true)}
             className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors flex items-center gap-2"
@@ -578,6 +627,14 @@ export default function SuppliersPage() {
                 </div>
 
                 <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleExport(supplier.id)}
+                    disabled={exporting || supplier._count.products === 0}
+                    className="px-3 py-1.5 text-sm bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Excel 내보내기"
+                  >
+                    Excel
+                  </button>
                   <Link
                     href={`/admin/suppliers/${supplier.id}`}
                     className="px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
