@@ -565,6 +565,13 @@ model SupplierProduct {
   boxQty       Int?     // 박스당 수량
   imageUrl     String?  // 제품 이미지 URL
 
+  // 물류 정보
+  itemWeight   Float?   // 제품 무게 (g)
+  itemSize     String?  // 제품 사이즈 (mm) - "W*D*H" 형식
+  boxWeight    Float?   // 박스 무게 (kg)
+  boxSize      String?  // 박스 사이즈 (cm) - "L*W*H" 형식
+  vatIncluded  Boolean? // 공급가 VAT 포함 여부
+
   // 원본 데이터 (업체별 모든 컬럼 저장)
   rawData      Json     // 원본 엑셀 행 데이터 전체
 
