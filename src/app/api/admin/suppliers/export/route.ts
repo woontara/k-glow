@@ -1,7 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
+
+// 이미지 URL에서 버퍼로 가져오기
+async function fetchImageAsBuffer(url: string): Promise<{ buffer: Buffer; extension: 'png' | 'jpeg' | 'gif' } | null> {
+  try {
+    const response = await fetch(url, {
+      signal: AbortSignal.timeout(5000) // 5초 타임아웃
+    });
+    if (!response.ok) return null;
+
+    const contentType = response.headers.get('content-type') || '';
+    let extension: 'png' | 'jpeg' | 'gif' = 'jpeg';
+    if (contentType.includes('png')) extension = 'png';
+    else if (contentType.includes('gif')) extension = 'gif';
+
+    const arrayBuffer = await response.arrayBuffer();
+    return { buffer: Buffer.from(arrayBuffer), extension };
+  } catch {
+    return null;
+  }
+}
 
 // 공급업체 제품 데이터를 엑셀로 내보내기
 export async function GET(request: NextRequest) {
@@ -40,7 +60,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 워크북 생성
-    const workbook = XLSX.utils.book_new();
+    const workbook = new ExcelJS.Workbook();
 
     // 공급가 계산: 원가 * 1.15, 백원 단위 버림
     const calculateSupplyPrice = (price: number | null): number | string => {
@@ -49,100 +69,149 @@ export async function GET(request: NextRequest) {
       return Math.floor(calculated / 100) * 100;
     };
 
+    // 컬럼 정의
+    const columnsWithImage = [
+      { header: '이미지', key: 'image', width: 15 },
+      { header: '브랜드', key: 'brand', width: 15 },
+      { header: '바코드', key: 'barcode', width: 15 },
+      { header: '제품명(한글)', key: 'nameKr', width: 40 },
+      { header: '제품명(영문)', key: 'nameEn', width: 40 },
+      { header: '용량', key: 'volume', width: 10 },
+      { header: '공급가(원)', key: 'supplyPrice', width: 12 },
+      { header: '소비자가(원)', key: 'msrp', width: 12 },
+      { header: 'VAT포함', key: 'vatIncluded', width: 8 },
+      { header: '박스수량', key: 'boxQty', width: 10 },
+      { header: '제품무게(g)', key: 'itemWeight', width: 12 },
+      { header: '제품사이즈(mm)', key: 'itemSize', width: 15 },
+      { header: '박스무게(kg)', key: 'boxWeight', width: 12 },
+      { header: '박스사이즈(cm)', key: 'boxSize', width: 15 },
+      { header: '유통기한', key: 'shelfLife', width: 12 },
+    ];
+
+    const columnsWithoutBrand = columnsWithImage.filter(c => c.key !== 'brand');
+
     if (supplierId === 'all') {
       // 모든 브랜드를 하나의 시트에
-      const allProducts = suppliers.flatMap(s =>
-        s.products.map(p => ({
-          '브랜드': s.name,
-          '바코드': p.barcode || '',
-          '제품명(한글)': p.nameKr,
-          '제품명(영문)': p.nameEn || '',
-          '용량': p.volume || '',
-          '공급가(원)': calculateSupplyPrice(p.supplyPrice),
-          '소비자가(원)': p.msrp || '',
-          'VAT포함': p.vatIncluded === true ? 'Y' : p.vatIncluded === false ? 'N' : '',
-          '박스수량': p.boxQty || '',
-          '제품무게(g)': p.itemWeight || '',
-          '제품사이즈(mm)': p.itemSize || '',
-          '박스무게(kg)': p.boxWeight || '',
-          '박스사이즈(cm)': p.boxSize || '',
-          '유통기한': p.shelfLife || '',
-          '이미지URL': p.imageUrl || '',
-        }))
-      );
+      const worksheet = workbook.addWorksheet('전체 제품');
+      worksheet.columns = columnsWithImage;
 
-      const worksheet = XLSX.utils.json_to_sheet(allProducts);
+      // 헤더 스타일
+      const headerRow = worksheet.getRow(1);
+      headerRow.height = 25;
+      headerRow.eachCell((cell) => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4A4A4A' } };
+        cell.font = { color: { argb: 'FFFFFFFF' }, bold: true };
+        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+      });
 
-      // 컬럼 너비 설정
-      worksheet['!cols'] = [
-        { wch: 15 }, // 브랜드
-        { wch: 15 }, // 바코드
-        { wch: 40 }, // 제품명(한글)
-        { wch: 40 }, // 제품명(영문)
-        { wch: 10 }, // 용량
-        { wch: 12 }, // 공급가
-        { wch: 12 }, // 소비자가
-        { wch: 8 },  // VAT포함
-        { wch: 10 }, // 박스수량
-        { wch: 12 }, // 제품무게
-        { wch: 15 }, // 제품사이즈
-        { wch: 12 }, // 박스무게
-        { wch: 15 }, // 박스사이즈
-        { wch: 12 }, // 유통기한
-        { wch: 50 }, // 이미지URL
-      ];
+      let rowIndex = 2;
+      for (const supplier of suppliers) {
+        for (const p of supplier.products) {
+          const row = worksheet.addRow({
+            image: '', // 이미지 셀은 비워둠
+            brand: supplier.name,
+            barcode: p.barcode || '',
+            nameKr: p.nameKr,
+            nameEn: p.nameEn || '',
+            volume: p.volume || '',
+            supplyPrice: calculateSupplyPrice(p.supplyPrice),
+            msrp: p.msrp || '',
+            vatIncluded: p.vatIncluded === true ? 'Y' : p.vatIncluded === false ? 'N' : '',
+            boxQty: p.boxQty || '',
+            itemWeight: p.itemWeight || '',
+            itemSize: p.itemSize || '',
+            boxWeight: p.boxWeight || '',
+            boxSize: p.boxSize || '',
+            shelfLife: p.shelfLife || '',
+          });
 
-      XLSX.utils.book_append_sheet(workbook, worksheet, '전체 제품');
+          row.height = 60; // 셀 높이 80
+          row.eachCell((cell) => {
+            cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+          });
+
+          // 이미지 추가
+          if (p.imageUrl) {
+            const imageData = await fetchImageAsBuffer(p.imageUrl);
+            if (imageData) {
+              const imageId = workbook.addImage({
+                buffer: imageData.buffer,
+                extension: imageData.extension,
+              });
+              worksheet.addImage(imageId, {
+                tl: { col: 0, row: rowIndex - 1 },
+                ext: { width: 75, height: 55 },
+              });
+            }
+          }
+
+          rowIndex++;
+        }
+      }
     } else {
       // 브랜드별 시트 생성
       for (const supplier of suppliers) {
-        const products = supplier.products.map(p => ({
-          '바코드': p.barcode || '',
-          '제품명(한글)': p.nameKr,
-          '제품명(영문)': p.nameEn || '',
-          '용량': p.volume || '',
-          '공급가(원)': calculateSupplyPrice(p.supplyPrice),
-          '소비자가(원)': p.msrp || '',
-          'VAT포함': p.vatIncluded === true ? 'Y' : p.vatIncluded === false ? 'N' : '',
-          '박스수량': p.boxQty || '',
-          '제품무게(g)': p.itemWeight || '',
-          '제품사이즈(mm)': p.itemSize || '',
-          '박스무게(kg)': p.boxWeight || '',
-          '박스사이즈(cm)': p.boxSize || '',
-          '유통기한': p.shelfLife || '',
-          '이미지URL': p.imageUrl || '',
-        }));
+        if (supplier.products.length === 0) continue;
 
-        if (products.length === 0) continue;
-
-        const worksheet = XLSX.utils.json_to_sheet(products);
-
-        // 컬럼 너비 설정
-        worksheet['!cols'] = [
-          { wch: 15 }, // 바코드
-          { wch: 40 }, // 제품명(한글)
-          { wch: 40 }, // 제품명(영문)
-          { wch: 10 }, // 용량
-          { wch: 12 }, // 공급가
-          { wch: 12 }, // 소비자가
-          { wch: 8 },  // VAT포함
-          { wch: 10 }, // 박스수량
-          { wch: 12 }, // 제품무게
-          { wch: 15 }, // 제품사이즈
-          { wch: 12 }, // 박스무게
-          { wch: 15 }, // 박스사이즈
-          { wch: 12 }, // 유통기한
-          { wch: 50 }, // 이미지URL
-        ];
-
-        // 시트 이름은 31자 제한
         const sheetName = supplier.name.substring(0, 31);
-        XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+        const worksheet = workbook.addWorksheet(sheetName);
+        worksheet.columns = columnsWithoutBrand;
+
+        // 헤더 스타일
+        const headerRow = worksheet.getRow(1);
+        headerRow.height = 25;
+        headerRow.eachCell((cell) => {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4A4A4A' } };
+          cell.font = { color: { argb: 'FFFFFFFF' }, bold: true };
+          cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        });
+
+        let rowIndex = 2;
+        for (const p of supplier.products) {
+          const row = worksheet.addRow({
+            image: '',
+            barcode: p.barcode || '',
+            nameKr: p.nameKr,
+            nameEn: p.nameEn || '',
+            volume: p.volume || '',
+            supplyPrice: calculateSupplyPrice(p.supplyPrice),
+            msrp: p.msrp || '',
+            vatIncluded: p.vatIncluded === true ? 'Y' : p.vatIncluded === false ? 'N' : '',
+            boxQty: p.boxQty || '',
+            itemWeight: p.itemWeight || '',
+            itemSize: p.itemSize || '',
+            boxWeight: p.boxWeight || '',
+            boxSize: p.boxSize || '',
+            shelfLife: p.shelfLife || '',
+          });
+
+          row.height = 60;
+          row.eachCell((cell) => {
+            cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+          });
+
+          // 이미지 추가
+          if (p.imageUrl) {
+            const imageData = await fetchImageAsBuffer(p.imageUrl);
+            if (imageData) {
+              const imageId = workbook.addImage({
+                buffer: imageData.buffer,
+                extension: imageData.extension,
+              });
+              worksheet.addImage(imageId, {
+                tl: { col: 0, row: rowIndex - 1 },
+                ext: { width: 75, height: 55 },
+              });
+            }
+          }
+
+          rowIndex++;
+        }
       }
     }
 
     // 엑셀 파일 생성
-    const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+    const buffer = await workbook.xlsx.writeBuffer();
 
     // 파일명 생성
     const date = new Date().toISOString().split('T')[0];
