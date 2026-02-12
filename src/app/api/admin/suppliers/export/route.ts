@@ -53,6 +53,7 @@ export async function GET(request: NextRequest) {
 
   const searchParams = request.nextUrl.searchParams;
   const supplierId = searchParams.get('supplierId'); // 특정 브랜드만 또는 'all'
+  const includeImages = searchParams.get('images') === 'true'; // 이미지 포함 여부
 
   try {
     // 데이터 조회
@@ -152,8 +153,8 @@ export async function GET(request: NextRequest) {
             cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
           });
 
-          // 이미지 추가
-          if (p.imageUrl) {
+          // 이미지 추가 (옵션)
+          if (includeImages && p.imageUrl) {
             const imageData = await fetchImageAsBase64(p.imageUrl);
             if (imageData) {
               const imageId = workbook.addImage({
@@ -213,8 +214,8 @@ export async function GET(request: NextRequest) {
             cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
           });
 
-          // 이미지 추가
-          if (p.imageUrl) {
+          // 이미지 추가 (옵션)
+          if (includeImages && p.imageUrl) {
             const imageData = await fetchImageAsBase64(p.imageUrl);
             if (imageData) {
               const imageId = workbook.addImage({
