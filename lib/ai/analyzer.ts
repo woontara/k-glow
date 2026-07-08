@@ -1,9 +1,16 @@
 import OpenAI from "openai"
 import { ScrapedWebsite } from "../scraper/website-scraper"
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
+let openaiClient: OpenAI | null = null
+
+function getOpenAI(): OpenAI {
+  if (!openaiClient) {
+    openaiClient = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    })
+  }
+  return openaiClient
+}
 
 export interface AnalysisResult {
   summary: string
@@ -49,7 +56,7 @@ ${scrapedData.products.slice(0, 10).map((p, i) => `  ${i + 1}. ${p.name} ${p.pri
 JSON 형식으로만 응답해주세요.
 `
 
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAI().chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
         {
@@ -81,7 +88,7 @@ JSON 형식으로 응답해주세요:
 }
 `
 
-    const translationCompletion = await openai.chat.completions.create({
+    const translationCompletion = await getOpenAI().chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
         {
@@ -138,7 +145,7 @@ JSON 형식으로 응답해주세요:
 }
 `
 
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAI().chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
         {
@@ -183,17 +190,19 @@ ${i + 1}. 제품명: ${p.name}
    ${p.description ? `설명: ${p.description}` : ""}
 `).join("\n")}
 
-JSON 배열 형식으로 응답해주세요:
-[
-  {
-    "nameRu": "러시아어 제품명",
-    "descriptionRu": "러시아어 설명"
-  },
-  ...
-]
+JSON 객체 형식으로 응답해주세요. "translations" 키에 제품 순서 그대로 배열을 담아주세요:
+{
+  "translations": [
+    {
+      "nameRu": "러시아어 제품명",
+      "descriptionRu": "러시아어 설명"
+    },
+    ...
+  ]
+}
 `
 
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAI().chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
         {
@@ -210,11 +219,12 @@ JSON 배열 형식으로 응답해주세요:
     })
 
     const response = JSON.parse(completion.choices[0].message.content || '{"translations": []}')
-    const translations = response.translations || []
+    const translations = Array.isArray(response.translations) ? response.translations : []
 
-    return translations.map((t: any, i: number) => ({
-      nameRu: t.nameRu || products[i].name,
-      descriptionRu: t.descriptionRu || products[i].description,
+    // 응답 개수가 부족해도 제품 수만큼 결과를 보장 (누락분은 원본 유지)
+    return products.map((product, i) => ({
+      nameRu: translations[i]?.nameRu || product.name,
+      descriptionRu: translations[i]?.descriptionRu || product.description,
     }))
 
   } catch (error: any) {

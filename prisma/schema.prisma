@@ -33,6 +33,7 @@ model User {
 
   certificationRequests CertificationRequest[]
   quotes                Quote[]
+  partners              Partner[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -57,10 +58,13 @@ model Company {
 
 model Partner {
   id          String  @id @default(cuid())
+  createdById String
+  createdBy   User    @relation(fields: [createdById], references: [id])
+
   name        String
   nameKo      String?
   nameRu      String?
-  website     String  @unique
+  website     String
   description String?
   logoUrl     String?
 
@@ -74,6 +78,8 @@ model Partner {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@unique([createdById, website])
 }
 
 model Product {

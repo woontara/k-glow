@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
-import { authOptions } from "../../auth/[...nextauth]/route"
+import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
+
     // 인증 확인
     const session = await getServerSession(authOptions)
     if (!session) {
@@ -17,8 +19,9 @@ export async function GET(
       )
     }
 
-    const partner = await prisma.partner.findUnique({
-      where: { id: params.id },
+    // 본인 소유 파트너만 조회 (타인 소유는 존재 여부도 노출하지 않고 404)
+    const partner = await prisma.partner.findFirst({
+      where: { id, createdById: session.user.id },
       include: {
         products: {
           orderBy: { createdAt: "desc" },

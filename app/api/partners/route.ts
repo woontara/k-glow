@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
-import { authOptions } from "../auth/[...nextauth]/route"
+import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
 export async function GET(req: NextRequest) {
@@ -14,8 +14,11 @@ export async function GET(req: NextRequest) {
       )
     }
 
-    // 파트너 목록 조회
+    // 파트너 목록 조회 (본인이 분석한 파트너만)
     const partners = await prisma.partner.findMany({
+      where: {
+        createdById: session.user.id,
+      },
       include: {
         products: {
           take: 5, // 각 파트너의 제품 5개만 미리보기

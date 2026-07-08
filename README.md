@@ -34,7 +34,7 @@ K-Glow는 한국의 중소 화장품 브랜드가 러시아/CIS 시장에 진출
 ## 기술 스택
 
 ### Frontend
-- **Next.js 15** - React 프레임워크
+- **Next.js 16** - React 프레임워크
 - **TypeScript** - 타입 안정성
 - **Tailwind CSS** - 스타일링
 
